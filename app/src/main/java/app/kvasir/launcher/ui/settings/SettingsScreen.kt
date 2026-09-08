@@ -34,8 +34,8 @@ import app.kvasir.launcher.R
 import app.kvasir.launcher.domain.model.Habit
 
 /**
- * Spec 003 + Spec 005 / RF-005-05 —
- * Favorites catalog + habit CRUD; no DataStore / LauncherApps here.
+ * Spec 003 + Spec 005 + Spec 006 / RF-006-03, RF-006-05 —
+ * Favorites catalog + habit CRUD + theme Switch; no DataStore / LauncherApps here.
  */
 @Composable
 fun SettingsScreen(
@@ -46,6 +46,8 @@ fun SettingsScreen(
     onAddHabit: (label: String) -> Unit,
     onRemoveHabit: (habitId: String) -> Unit,
     onRenameHabit: (habitId: String, label: String) -> Unit,
+    darkTheme: Boolean,
+    onDarkThemeChange: (Boolean) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -76,6 +78,27 @@ fun SettingsScreen(
         }
 
         LazyColumn(modifier = Modifier.fillMaxSize()) {
+            item(key = "theme_row") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text = stringResource(R.string.theme_dark),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Switch(
+                        checked = darkTheme,
+                        onCheckedChange = onDarkThemeChange,
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
             item(key = "favorites_header") {
                 Text(
                     text = stringResource(R.string.choose_favorites),

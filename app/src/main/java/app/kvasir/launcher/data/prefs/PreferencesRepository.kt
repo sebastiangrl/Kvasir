@@ -9,6 +9,7 @@ import app.kvasir.launcher.domain.HabitDayRoll
 import app.kvasir.launcher.domain.HabitJson
 import app.kvasir.launcher.domain.model.Habit
 import app.kvasir.launcher.domain.model.HabitDayState
+import app.kvasir.launcher.domain.model.ThemeMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
@@ -21,7 +22,7 @@ private val Context.kvasirDataStore: DataStore<Preferences> by preferencesDataSt
 )
 
 /**
- * Spec 003 favorites + Spec 005 / RF-005-01, RF-005-03, RF-005-04, RF-005-05, RF-005-08 —
+ * Spec 003 + Spec 005 + Spec 006 / RF-006-01, RF-006-03, RF-006-06 —
  * Preferences DataStore; Application context only.
  */
 class PreferencesRepository(
@@ -46,6 +47,11 @@ class PreferencesRepository(
     val habitDayState: Flow<HabitDayState> = dataStore.data.map { prefs ->
         val decoded = HabitJson.decodeDayState(prefs[PreferencesKeys.HABIT_DAY_STATE_JSON])
         HabitDayRoll.ensureToday(decoded, todayEpochDay())
+    }
+
+    /** Emits theme mode; missing/invalid → Light (RF-006-06). */
+    val themeMode: Flow<ThemeMode> = dataStore.data.map { prefs ->
+        ThemeMode.fromStorage(prefs[PreferencesKeys.THEME_MODE])
     }
 
     suspend fun addFavorite(componentKey: String) {
@@ -135,6 +141,13 @@ class PreferencesRepository(
             }
             prefs[PreferencesKeys.HABIT_DAY_STATE_JSON] =
                 HabitJson.encodeDayState(rolled.copy(completedIds = ids))
+        }
+    }
+
+    /** RF-006-01, RF-006-03 — persist Light/Dark theme mode. */
+    suspend fun setThemeMode(mode: ThemeMode) {
+        dataStore.edit { prefs ->
+            prefs[PreferencesKeys.THEME_MODE] = mode.storageValue
         }
     }
 

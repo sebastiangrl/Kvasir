@@ -4,8 +4,8 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 
 /**
- * Spec 003 / RF-003-01 + Spec 005 / RF-005-01, RF-005-08 —
- * Preferences schema; additive keys; missing → empty defaults.
+ * Spec 003 + Spec 005 + Spec 006 / RF-006-01, RF-006-06 —
+ * Preferences schema; additive keys; missing → empty / light defaults.
  */
 object PreferencesKeys {
     /** Stable set of [app.kvasir.launcher.domain.model.InstalledApp.componentKey] values. */
@@ -16,4 +16,7 @@ object PreferencesKeys {
 
     /** JSON object `{ epochDay, completedIds }`. */
     val HABIT_DAY_STATE_JSON = stringPreferencesKey("habit_day_state_json")
+
+    /** Theme mode: `"light"` | `"dark"`; missing → light. */
+    val THEME_MODE = stringPreferencesKey("theme_mode")
 }

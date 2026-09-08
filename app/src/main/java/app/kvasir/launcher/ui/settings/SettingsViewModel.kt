@@ -9,6 +9,7 @@ import app.kvasir.launcher.data.apps.LauncherAppsRepository
 import app.kvasir.launcher.data.prefs.PreferencesRepository
 import app.kvasir.launcher.domain.model.Habit
 import app.kvasir.launcher.domain.model.InstalledApp
+import app.kvasir.launcher.domain.model.ThemeMode
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -17,8 +18,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * Spec 003 favorites + Spec 005 / RF-005-05 —
- * Settings catalog + habit CRUD; Composables never touch DataStore / LauncherApps.
+ * Spec 003 + Spec 005 + Spec 006 / RF-006-02, RF-006-03, RF-006-05 —
+ * Settings catalog, habits, theme; Composables never touch DataStore / LauncherApps.
  */
 data class SettingsFavoriteRow(
     val app: InstalledApp,
@@ -29,6 +30,7 @@ data class SettingsUiState(
     val rows: List<SettingsFavoriteRow> = emptyList(),
     val appsLoaded: Boolean = false,
     val habits: List<Habit> = emptyList(),
+    val themeMode: ThemeMode = ThemeMode.Light,
 )
 
 class SettingsViewModel(
@@ -36,11 +38,22 @@ class SettingsViewModel(
     private val preferencesRepository: PreferencesRepository,
 ) : ViewModel() {
 
+    /**
+     * Theme for [app.kvasir.launcher.MainActivity] / [app.kvasir.launcher.ui.theme.KvasirTheme].
+     * Eager so theme stays fresh while Activity holds this VM (plan riesgo 2).
+     */
+    val themeMode: StateFlow<ThemeMode> = preferencesRepository.themeMode.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Eagerly,
+        initialValue = ThemeMode.Light,
+    )
+
     val uiState: StateFlow<SettingsUiState> = combine(
         launcherAppsRepository.snapshot,
         preferencesRepository.favoriteKeys,
         preferencesRepository.habits,
-    ) { snapshot, favoriteKeys, habits ->
+        preferencesRepository.themeMode,
+    ) { snapshot, favoriteKeys, habits, theme ->
         SettingsUiState(
             rows = snapshot.apps.map { app ->
                 SettingsFavoriteRow(
@@ -50,6 +63,7 @@ class SettingsViewModel(
             },
             appsLoaded = snapshot.appsLoaded,
             habits = habits,
+            themeMode = theme,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -97,6 +111,15 @@ class SettingsViewModel(
     fun renameHabit(habitId: String, newLabel: String) {
         viewModelScope.launch {
             preferencesRepository.renameHabit(habitId, newLabel)
+        }
+    }
+
+    /** RF-006-03 — Switch checked = Dark; Compose-only, no setDefaultNightMode. */
+    fun setDarkTheme(dark: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.setThemeMode(
+                if (dark) ThemeMode.Dark else ThemeMode.Light,
+            )
         }
     }
 
