@@ -8,18 +8,20 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kvasir.launcher.domain.model.ThemeMode
 import app.kvasir.launcher.ui.KvasirRoot
 import app.kvasir.launcher.ui.home.HomeViewModel
+import app.kvasir.launcher.ui.icons.LocalAppIconLoader
 import app.kvasir.launcher.ui.overlay.OverlayViewModel
 import app.kvasir.launcher.ui.settings.SettingsViewModel
 import app.kvasir.launcher.ui.theme.KvasirTheme
 
 /**
- * Spec 001–006 — HOME Activity hosts [KvasirRoot]; theme via Compose only (RF-006-04).
+ * Spec 001–006 + Spec 010 — HOME Activity hosts [KvasirRoot]; theme via Compose only.
  * Composables do not call DataStore / LauncherApps.
  */
 class MainActivity : ComponentActivity() {
@@ -63,15 +65,21 @@ class MainActivity : ComponentActivity() {
         )
 
         setContent {
+            val app = application as KvasirApp
             val themeMode by settingsViewModel.themeMode.collectAsStateWithLifecycle()
             // RF-006-02, RF-006-04 — recompose MaterialTheme; never setDefaultNightMode.
-            KvasirTheme(darkTheme = themeMode == ThemeMode.Dark) {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    KvasirRoot(
-                        homeViewModel = homeViewModel,
-                        settingsViewModel = settingsViewModel,
-                        overlayViewModel = overlayViewModel,
-                    )
+            // Spec 010 / RF-010-05 — icon loader for MonochromeAppIcon (used in T2/T3 rows).
+            CompositionLocalProvider(
+                LocalAppIconLoader provides app.container.appIconLoader,
+            ) {
+                KvasirTheme(darkTheme = themeMode == ThemeMode.Dark) {
+                    Surface(modifier = Modifier.fillMaxSize()) {
+                        KvasirRoot(
+                            homeViewModel = homeViewModel,
+                            settingsViewModel = settingsViewModel,
+                            overlayViewModel = overlayViewModel,
+                        )
+                    }
                 }
             }
         }

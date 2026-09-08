@@ -37,11 +37,12 @@ import app.kvasir.launcher.R
 import app.kvasir.launcher.domain.LetterBucket
 import app.kvasir.launcher.domain.model.InstalledApp
 import app.kvasir.launcher.ui.gesture.onVerticalSwipe
+import app.kvasir.launcher.ui.icons.MonochromeAppIcon
 import kotlin.math.roundToInt
 
 /**
- * Spec 004 scrubber + Spec 008 search + Spec 009 / RF-009-04 —
- * Full-screen apps overlay: search + list + scrubber; long-press → app details.
+ * Spec 004 scrubber + Spec 008 search + Spec 009 details + Spec 010 / RF-010-02 —
+ * Overlay: search + monochrome icons + scrubber; long-press → app details.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -108,8 +109,7 @@ fun AppsOverlay(
                                 items = filteredApps,
                                 key = { it.componentKey },
                             ) { app ->
-                                Text(
-                                    text = app.label,
+                                Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .combinedClickable(
@@ -117,9 +117,16 @@ fun AppsOverlay(
                                             onLongClick = { onAppLongClick(app) },
                                         )
                                         .padding(horizontal = 24.dp, vertical = 12.dp),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    MonochromeAppIcon(app = app)
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        text = app.label,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                }
                             }
                         }
                     }

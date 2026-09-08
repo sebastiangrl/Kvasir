@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
@@ -29,10 +30,11 @@ import androidx.compose.ui.unit.dp
 import app.kvasir.launcher.R
 import app.kvasir.launcher.domain.model.InstalledApp
 import app.kvasir.launcher.ui.gesture.onVerticalSwipe
+import app.kvasir.launcher.ui.icons.MonochromeAppIcon
 
 /**
- * Spec 003–005 + 008 + Spec 009 / RF-009-01, RF-009-03, RF-009-04 —
- * Home: clock, search, habits; swipes; long-press favorite → app details.
+ * Spec 003–005 + 008 + 009 + Spec 010 / RF-010-01 —
+ * Home: clock, search, monochrome favorite icons, habits; swipes; long-press details.
  * No DataStore / PackageManager / LauncherApps / StatusBar calls here.
  */
 @OptIn(ExperimentalFoundationApi::class)
@@ -141,8 +143,7 @@ fun HomeScreen(
                                 items = favorites,
                                 key = { it.componentKey },
                             ) { app ->
-                                Text(
-                                    text = app.label,
+                                Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .combinedClickable(
@@ -150,9 +151,16 @@ fun HomeScreen(
                                             onLongClick = { onFavoriteLongClick(app) },
                                         )
                                         .padding(horizontal = 24.dp, vertical = 12.dp),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    MonochromeAppIcon(app = app)
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        text = app.label,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                }
                             }
                         }
                     }
