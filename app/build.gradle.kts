@@ -61,5 +61,7 @@ dependencies {
     // Spec 003 / RF-003-01 — Preferences DataStore for favorite keys
     implementation(libs.androidx.datastore.preferences)
 
+    // Spec 005 — real org.json for JVM unit tests (Android stubs throw at runtime)
+    testImplementation("org.json:json:20240303")
     testImplementation(libs.junit)
 }

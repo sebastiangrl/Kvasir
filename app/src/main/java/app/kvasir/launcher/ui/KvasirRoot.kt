@@ -49,6 +49,8 @@ fun KvasirRoot(
                     favorites = uiState.favorites,
                     favoritesReady = uiState.favoritesReady,
                     onFavoriteClick = homeViewModel::launchApp,
+                    habitRows = uiState.habitRows,
+                    onHabitCheckedChange = homeViewModel::setHabitCompleted,
                     onSettingsClick = {
                         settingsViewModel.onSettingsOpened()
                         destination = RootDestination.Settings
@@ -62,6 +64,10 @@ fun KvasirRoot(
                     rows = uiState.rows,
                     appsLoaded = uiState.appsLoaded,
                     onFavoriteChange = settingsViewModel::setFavorite,
+                    habits = uiState.habits,
+                    onAddHabit = settingsViewModel::addHabit,
+                    onRemoveHabit = settingsViewModel::removeHabit,
+                    onRenameHabit = settingsViewModel::renameHabit,
                     onBack = { destination = RootDestination.Home },
                 )
             }

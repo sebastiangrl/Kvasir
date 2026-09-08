@@ -11,6 +11,7 @@ import app.kvasir.launcher.data.apps.LauncherAppsRepository
 import app.kvasir.launcher.data.home.DefaultHomeRepository
 import app.kvasir.launcher.data.prefs.PreferencesRepository
 import app.kvasir.launcher.domain.FavoritesResolver
+import app.kvasir.launcher.domain.model.Habit
 import app.kvasir.launcher.domain.model.InstalledApp
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -18,22 +19,29 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 /**
- * Spec 001 CTA + Spec 003 / RF-003-02, RF-003-03, RF-003-04, RF-003-06, RF-003-07 —
- * Home shows resolved favorites only; Composables never call DataStore / LauncherApps.
+ * Spec 003 favorites + Spec 005 / RF-005-02, RF-005-03, RF-005-06, RF-005-07 —
+ * Home UI state; Composables never call DataStore / LauncherApps.
  */
+data class HomeHabitRow(
+    val habit: Habit,
+    val completed: Boolean,
+)
+
 data class HomeUiState(
     val showDefaultHomeCta: Boolean = false,
     val favorites: List<InstalledApp> = emptyList(),
     val favoritesReady: Boolean = false,
+    val habitRows: List<HomeHabitRow> = emptyList(),
 )
 
 class HomeViewModel(
     application: Application,
     private val defaultHomeRepository: DefaultHomeRepository,
     private val launcherAppsRepository: LauncherAppsRepository,
-    preferencesRepository: PreferencesRepository,
+    private val preferencesRepository: PreferencesRepository,
 ) : AndroidViewModel(application) {
 
     private val defaultHomeCta = MutableStateFlow(false)
@@ -42,7 +50,9 @@ class HomeViewModel(
         defaultHomeCta,
         launcherAppsRepository.snapshot,
         preferencesRepository.favoriteKeys,
-    ) { showCta, snapshot, favoriteKeys ->
+        preferencesRepository.habits,
+        preferencesRepository.habitDayState,
+    ) { showCta, snapshot, favoriteKeys, habits, dayState ->
         HomeUiState(
             showDefaultHomeCta = showCta,
             favorites = FavoritesResolver.resolve(
@@ -50,6 +60,12 @@ class HomeViewModel(
                 installed = snapshot.apps,
             ),
             favoritesReady = snapshot.appsLoaded,
+            habitRows = habits.map { habit ->
+                HomeHabitRow(
+                    habit = habit,
+                    completed = habit.id in dayState.completedIds,
+                )
+            },
         )
     }.stateIn(
         scope = viewModelScope,
@@ -73,6 +89,13 @@ class HomeViewModel(
     /** RF-003-03 — launch via repository (safe for Home process). */
     fun launchApp(app: InstalledApp) {
         launcherAppsRepository.launch(app)
+    }
+
+    /** RF-005-03 — persist habit completion immediately. */
+    fun setHabitCompleted(habitId: String, completed: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.setHabitCompleted(habitId, completed)
+        }
     }
 
     companion object {
