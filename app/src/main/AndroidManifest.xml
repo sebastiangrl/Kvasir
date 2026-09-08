@@ -2,6 +2,9 @@
 <!-- Spec 001 HOME + Spec 002 / RF-002-03 package visibility (no QUERY_ALL_PACKAGES). -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Spec 009 / RF-009-01 — expand QS / notifications panel (normal permission). -->
+    <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
+
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />

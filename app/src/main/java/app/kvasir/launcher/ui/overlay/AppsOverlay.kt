@@ -2,6 +2,8 @@ package app.kvasir.launcher.ui.overlay
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,9 +40,10 @@ import app.kvasir.launcher.ui.gesture.onVerticalSwipe
 import kotlin.math.roundToInt
 
 /**
- * Spec 004 scrubber + Spec 008 / RF-008-02…04, RF-008-06 —
- * Full-screen apps overlay: search + list + scrubber; swipe-down closes.
+ * Spec 004 scrubber + Spec 008 search + Spec 009 / RF-009-04 —
+ * Full-screen apps overlay: search + list + scrubber; long-press → app details.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AppsOverlay(
     selectedLetter: Char,
@@ -50,6 +53,7 @@ fun AppsOverlay(
     appsLoaded: Boolean,
     onSelectLetter: (Char) -> Unit,
     onAppClick: (InstalledApp) -> Unit,
+    onAppLongClick: (InstalledApp) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -108,7 +112,10 @@ fun AppsOverlay(
                                     text = app.label,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable { onAppClick(app) }
+                                        .combinedClickable(
+                                            onClick = { onAppClick(app) },
+                                            onLongClick = { onAppLongClick(app) },
+                                        )
                                         .padding(horizontal = 24.dp, vertical = 12.dp),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurface,

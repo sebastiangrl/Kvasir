@@ -18,8 +18,8 @@ import app.kvasir.launcher.ui.settings.SettingsViewModel
 import app.kvasir.launcher.domain.model.ThemeMode
 
 /**
- * Spec 003 + Spec 004 / RF-004-01, RF-004-02, RF-004-08 + Spec 008 —
- * Home | Settings; lazy overlay with search; Back: overlay > Settings > stay on Home.
+ * Spec 003 + Spec 004 + Spec 008 + Spec 009 —
+ * Home | Settings; lazy overlay; system panel + long-press app details.
  */
 @Composable
 fun KvasirRoot(
@@ -53,6 +53,7 @@ fun KvasirRoot(
                     hasAnyFavorites = uiState.hasAnyFavorites,
                     favoritesReady = uiState.favoritesReady,
                     onFavoriteClick = homeViewModel::launchApp,
+                    onFavoriteLongClick = homeViewModel::openAppDetails,
                     habitRows = uiState.habitRows,
                     onHabitCheckedChange = homeViewModel::setHabitCompleted,
                     onSettingsClick = {
@@ -60,6 +61,7 @@ fun KvasirRoot(
                         destination = RootDestination.Settings
                     },
                     onOpenOverlay = overlayViewModel::open,
+                    onExpandSystemPanel = homeViewModel::expandSystemPanel,
                 )
             }
             RootDestination.Settings -> {
@@ -89,6 +91,7 @@ fun KvasirRoot(
                 appsLoaded = overlayState.appsLoaded,
                 onSelectLetter = overlayViewModel::selectLetter,
                 onAppClick = overlayViewModel::launchAndClose,
+                onAppLongClick = overlayViewModel::openAppDetails,
                 onClose = overlayViewModel::close,
             )
         }

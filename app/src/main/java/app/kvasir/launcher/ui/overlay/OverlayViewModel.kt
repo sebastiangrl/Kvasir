@@ -1,10 +1,12 @@
 package app.kvasir.launcher.ui.overlay
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import app.kvasir.launcher.data.apps.AppDetailsNavigator
 import app.kvasir.launcher.data.apps.LauncherAppsRepository
 import app.kvasir.launcher.domain.AppLabelFilter
 import app.kvasir.launcher.domain.model.InstalledApp
@@ -16,8 +18,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 
 /**
- * Spec 004 scrubber + Spec 008 / RF-008-02…05, RF-008-06 —
- * Overlay open + letter/query filter; no PreferencesRepository.
+ * Spec 004 scrubber + Spec 008 search + Spec 009 / RF-009-04, RF-009-05 —
+ * Overlay open + letter/query filter; app details; no PreferencesRepository.
  */
 data class OverlayUiState(
     val isOpen: Boolean = false,
@@ -28,6 +30,7 @@ data class OverlayUiState(
 )
 
 class OverlayViewModel(
+    private val appContext: Context,
     private val launcherAppsRepository: LauncherAppsRepository,
 ) : ViewModel() {
 
@@ -91,13 +94,20 @@ class OverlayViewModel(
         close()
     }
 
+    /** Spec 009 / RF-009-04, RF-009-05 — details; does not close overlay or mutate favorites. */
+    fun openAppDetails(app: InstalledApp) {
+        AppDetailsNavigator.open(appContext, app.packageName)
+    }
+
     companion object {
         fun factory(
+            appContext: Context,
             launcherAppsRepository: LauncherAppsRepository,
         ): ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
                     OverlayViewModel(
+                        appContext = appContext.applicationContext,
                         launcherAppsRepository = launcherAppsRepository,
                     )
                 }
