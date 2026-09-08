@@ -9,8 +9,8 @@ import android.util.Log
 import app.kvasir.launcher.data.apps.AppDetailsNavigator
 
 /**
- * Spec 016 / RF-016-04, RF-016-05 —
- * Opens system settings screens for this app (notifications, exact alarms, details).
+ * Spec 016 / RF-016-04, RF-016-05 + Spec 017 / RF-017-03 —
+ * Opens system settings screens for this app (notifications, exact alarms, details, listener).
  * No Compose; Application context + NEW_TASK.
  */
 object AppSettingsNavigator {
@@ -60,6 +60,22 @@ object AppSettingsNavigator {
         } catch (t: Throwable) {
             Log.w(TAG, "exact alarm settings failed; falling back to details", t)
             openAppDetails(context, packageName)
+        }
+    }
+
+    /** Spec 017 / RF-017-03 — system screen to enable NotificationListenerService. */
+    fun notificationListenerSettingsIntent(): Intent {
+        return Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+    }
+
+    fun openNotificationListenerSettings(context: Context) {
+        try {
+            context.applicationContext.startActivity(notificationListenerSettingsIntent())
+        } catch (t: Throwable) {
+            Log.w(TAG, "notification listener settings failed; falling back to details", t)
+            openAppDetails(context, context.applicationContext.packageName)
         }
     }
 }

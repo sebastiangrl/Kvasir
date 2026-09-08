@@ -7,14 +7,16 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.ContextCompat
 import app.kvasir.launcher.data.home.DefaultHomeRepository
+import app.kvasir.launcher.data.notifications.NotificationBadgeRepository
 
 /**
- * Spec 016 / RF-016-04, RF-016-05 —
- * Reads permission / default-Home status with Application context (no Compose).
+ * Spec 016 / RF-016-04, RF-016-05 + Spec 017 / RF-017-03 —
+ * Reads permission / default-Home / listener status with Application context (no Compose).
  */
 class PermissionsStatusHelper(
     context: Context,
     private val defaultHomeRepository: DefaultHomeRepository,
+    private val notificationBadgeRepository: NotificationBadgeRepository,
 ) {
     private val appContext = context.applicationContext
 
@@ -45,6 +47,7 @@ class PermissionsStatusHelper(
             isDefaultHome = defaultHomeRepository.isDefaultHome(),
             calendarGranted = calendarGranted,
             notificationsGranted = notificationsGranted,
+            notificationListenerGranted = notificationBadgeRepository.isListenerEnabled(),
             exactAlarmApplicable = exactAlarmApplicable,
             exactAlarmGranted = exactAlarmGranted,
         )
