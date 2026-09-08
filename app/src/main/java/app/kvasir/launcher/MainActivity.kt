@@ -11,11 +11,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import app.kvasir.launcher.ui.KvasirRoot
 import app.kvasir.launcher.ui.home.HomeViewModel
+import app.kvasir.launcher.ui.overlay.OverlayViewModel
 import app.kvasir.launcher.ui.settings.SettingsViewModel
 import app.kvasir.launcher.ui.theme.KvasirTheme
 
 /**
- * Spec 001 + Spec 003 / RF-003-05, RF-003-07 —
+ * Spec 001 + Spec 003 + Spec 004 / RF-004-07 —
  * HOME Activity hosts [KvasirRoot]; Composables do not call DataStore / LauncherApps.
  */
 class MainActivity : ComponentActivity() {
@@ -34,6 +35,13 @@ class MainActivity : ComponentActivity() {
         SettingsViewModel.factory(
             launcherAppsRepository = app.container.launcherAppsRepository,
             preferencesRepository = app.container.preferencesRepository,
+        )
+    }
+
+    private val overlayViewModel: OverlayViewModel by viewModels {
+        val app = application as KvasirApp
+        OverlayViewModel.factory(
+            launcherAppsRepository = app.container.launcherAppsRepository,
         )
     }
 
@@ -57,6 +65,7 @@ class MainActivity : ComponentActivity() {
                     KvasirRoot(
                         homeViewModel = homeViewModel,
                         settingsViewModel = settingsViewModel,
+                        overlayViewModel = overlayViewModel,
                     )
                 }
             }
@@ -71,7 +80,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         // RF-001-04 — warm return to Home; do not recreate setContent.
+        // RF-004-02 — leave overlay closed.
         super.onNewIntent(intent)
         setIntent(intent)
+        overlayViewModel.close()
     }
 }

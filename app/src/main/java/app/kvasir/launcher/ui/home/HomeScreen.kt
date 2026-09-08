@@ -2,6 +2,7 @@ package app.kvasir.launcher.ui.home
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,11 +23,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.kvasir.launcher.R
 import app.kvasir.launcher.domain.model.InstalledApp
+import app.kvasir.launcher.ui.gesture.onVerticalSwipe
 
 /**
- * Spec 001 + Spec 003 / RF-003-03, RF-003-04, RF-003-06, RF-003-07 —
- * Home: clock, favorites (or empty), CTA, Settings entry.
- * No DataStore / PackageManager / LauncherApps calls here.
+ * Spec 001 + Spec 003 + Spec 004 / RF-004-01 —
+ * Home: clock, favorites, CTA, Settings; swipe-up opens apps overlay.
  */
 @Composable
 fun HomeScreen(
@@ -36,75 +37,83 @@ fun HomeScreen(
     favoritesReady: Boolean,
     onFavoriteClick: (InstalledApp) -> Unit,
     onSettingsClick: () -> Unit,
+    onOpenOverlay: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
+    Box(
         modifier = modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .padding(top = 32.dp),
-        verticalArrangement = Arrangement.Top,
+            .onVerticalSwipe(onSwipeUp = onOpenOverlay),
     ) {
-        TextButton(
-            onClick = onSettingsClick,
+        Column(
             modifier = Modifier
-                .align(Alignment.End)
-                .padding(horizontal = 8.dp),
+                .fillMaxSize()
+                .padding(top = 32.dp),
+            verticalArrangement = Arrangement.Top,
         ) {
-            Text(text = stringResource(R.string.settings))
-        }
-
-        HomeClock()
-        Spacer(modifier = Modifier.height(48.dp))
-
-        if (showDefaultHomeCta) {
-            Text(
-                text = stringResource(R.string.home_not_default_message),
-                modifier = Modifier.padding(horizontal = 24.dp),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Button(
-                onClick = onChooseHomeClick,
-                modifier = Modifier.padding(horizontal = 24.dp),
+            TextButton(
+                onClick = onSettingsClick,
+                modifier = Modifier
+                    .align(Alignment.End)
+                    .padding(horizontal = 8.dp),
             ) {
-                Text(text = stringResource(R.string.home_choose_default_action))
+                Text(text = stringResource(R.string.settings))
             }
-            Spacer(modifier = Modifier.height(32.dp))
-        }
 
-        when {
-            !favoritesReady -> {
-                // Wait for installed-apps snapshot; do not invent rows (RF-003-04).
-            }
-            favorites.isEmpty() -> {
+            HomeClock()
+            Spacer(modifier = Modifier.height(48.dp))
+
+            if (showDefaultHomeCta) {
                 Text(
-                    text = stringResource(R.string.home_empty_favorites),
+                    text = stringResource(R.string.home_not_default_message),
                     modifier = Modifier.padding(horizontal = 24.dp),
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
-            }
-            else -> {
-                LazyColumn(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
+                Spacer(modifier = Modifier.height(12.dp))
+                Button(
+                    onClick = onChooseHomeClick,
+                    modifier = Modifier.padding(horizontal = 24.dp),
                 ) {
-                    items(
-                        items = favorites,
-                        key = { it.componentKey },
-                    ) { app ->
-                        Text(
-                            text = app.label,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onFavoriteClick(app) }
-                                .padding(horizontal = 24.dp, vertical = 12.dp),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
+                    Text(text = stringResource(R.string.home_choose_default_action))
+                }
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+
+            when {
+                !favoritesReady -> {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+                favorites.isEmpty() -> {
+                    Text(
+                        text = stringResource(R.string.home_empty_favorites),
+                        modifier = Modifier.padding(horizontal = 24.dp),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                    ) {
+                        items(
+                            items = favorites,
+                            key = { it.componentKey },
+                        ) { app ->
+                            Text(
+                                text = app.label,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onFavoriteClick(app) }
+                                    .padding(horizontal = 24.dp, vertical = 12.dp),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
                     }
                 }
             }

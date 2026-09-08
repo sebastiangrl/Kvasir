@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Spec 001 + Spec 003 / RF-003-04, RF-003-05 -->
+<!-- Spec 001 + Spec 003 + Spec 004 / RF-004-05 -->
 <resources>
     <string name="app_name">Kvasir</string>
     <string name="home_empty_favorites">Sin favoritas todavía.</string>
@@ -9,4 +9,5 @@
     <string name="settings_back">Atrás</string>
     <string name="choose_favorites">Elegir favoritas</string>
     <string name="apps_installed_empty">No se encontraron apps.</string>
+    <string name="overlay_letter_empty">Ninguna app con esta letra.</string>
 </resources>
