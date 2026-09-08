@@ -9,35 +9,28 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.kvasir.launcher.domain.model.HomeListMode
+import app.kvasir.launcher.domain.model.ThemeMode
 import app.kvasir.launcher.ui.home.HomeScreen
 import app.kvasir.launcher.ui.home.HomeViewModel
-import app.kvasir.launcher.ui.overlay.AppsOverlay
-import app.kvasir.launcher.ui.overlay.OverlayViewModel
 import app.kvasir.launcher.ui.settings.SettingsScreen
 import app.kvasir.launcher.ui.settings.SettingsViewModel
-import app.kvasir.launcher.domain.model.ThemeMode
 
 /**
- * Spec 003 + Spec 004 + Spec 008 + Spec 009 + Spec 012 —
- * Home | Settings; lazy overlay; system panel + long-press app details; next calendar event.
+ * Spec 003 + Spec 008 + Spec 009 + Spec 012 + Spec 013 —
+ * Home (Niagara scrubber) | Settings. Overlay A–Z removed (RF-013-05).
  */
 @Composable
 fun KvasirRoot(
     homeViewModel: HomeViewModel,
     settingsViewModel: SettingsViewModel,
-    overlayViewModel: OverlayViewModel,
     modifier: Modifier = Modifier,
 ) {
     var destination by rememberSaveable { mutableStateOf(RootDestination.Home) }
-    val overlayState by overlayViewModel.uiState.collectAsStateWithLifecycle()
 
-    // RF-003-05 — Settings Back → Home (only when overlay closed).
-    BackHandler(enabled = destination == RootDestination.Settings && !overlayState.isOpen) {
+    // RF-003-05 — Settings Back → Home.
+    BackHandler(enabled = destination == RootDestination.Settings) {
         destination = RootDestination.Home
-    }
-    // RF-004-02 — Overlay Back → close; do not finish Activity.
-    BackHandler(enabled = overlayState.isOpen) {
-        overlayViewModel.close()
     }
 
     Box(modifier = modifier) {
@@ -45,6 +38,12 @@ fun KvasirRoot(
             RootDestination.Home -> {
                 val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
                 val nextEvent by homeViewModel.nextEvent.collectAsStateWithLifecycle()
+                val leaveFavoritesChrome =
+                    uiState.isQueryActive || uiState.listMode !is HomeListMode.Favorites
+                // Spec 013 / RF-013-07 — Back from letter/query → ★ (do not finish Activity).
+                BackHandler(enabled = leaveFavoritesChrome) {
+                    homeViewModel.resetToFavorites()
+                }
                 HomeScreen(
                     showDefaultHomeCta = uiState.showDefaultHomeCta,
                     onChooseHomeClick = homeViewModel::openHomePicker,
@@ -53,16 +52,23 @@ fun KvasirRoot(
                     favorites = uiState.favorites,
                     hasAnyFavorites = uiState.hasAnyFavorites,
                     favoritesReady = uiState.favoritesReady,
+                    catalogApps = uiState.catalogApps,
+                    showingFavoritesChrome = uiState.showingFavoritesChrome,
+                    isQueryActive = uiState.isQueryActive,
+                    listMode = uiState.listMode,
                     onFavoriteClick = homeViewModel::launchApp,
                     onFavoriteLongClick = homeViewModel::openAppDetails,
+                    onCatalogAppClick = homeViewModel::launchApp,
+                    onCatalogAppLongClick = homeViewModel::openAppDetails,
                     habitRows = uiState.habitRows,
                     onHabitCheckedChange = homeViewModel::setHabitCompleted,
                     onSettingsClick = {
                         settingsViewModel.onSettingsOpened()
                         destination = RootDestination.Settings
                     },
-                    onOpenOverlay = overlayViewModel::open,
                     onExpandSystemPanel = homeViewModel::expandSystemPanel,
+                    onSelectFavorites = homeViewModel::resetToFavorites,
+                    onSelectLetter = homeViewModel::selectLetter,
                     nextEvent = nextEvent,
                     onNextEventClick = homeViewModel::openNextEvent,
                 )
@@ -82,21 +88,6 @@ fun KvasirRoot(
                     onBack = { destination = RootDestination.Home },
                 )
             }
-        }
-
-        // RF-004-08 — lazy: only compose when open.
-        if (overlayState.isOpen) {
-            AppsOverlay(
-                selectedLetter = overlayState.selectedLetter,
-                searchQuery = overlayState.searchQuery,
-                onSearchQueryChange = overlayViewModel::setSearchQuery,
-                filteredApps = overlayState.filteredApps,
-                appsLoaded = overlayState.appsLoaded,
-                onSelectLetter = overlayViewModel::selectLetter,
-                onAppClick = overlayViewModel::launchAndClose,
-                onAppLongClick = overlayViewModel::openAppDetails,
-                onClose = overlayViewModel::close,
-            )
         }
     }
 }

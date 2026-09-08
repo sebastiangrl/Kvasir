@@ -20,12 +20,11 @@ import app.kvasir.launcher.domain.model.ThemeMode
 import app.kvasir.launcher.ui.KvasirRoot
 import app.kvasir.launcher.ui.home.HomeViewModel
 import app.kvasir.launcher.ui.icons.LocalAppIconLoader
-import app.kvasir.launcher.ui.overlay.OverlayViewModel
 import app.kvasir.launcher.ui.settings.SettingsViewModel
 import app.kvasir.launcher.ui.theme.KvasirTheme
 
 /**
- * Spec 001–006 + Spec 010 + Spec 012 / RF-012-02 —
+ * Spec 001–006 + Spec 010 + Spec 012 + Spec 013 / RF-013-05, RF-013-07 —
  * HOME Activity hosts [KvasirRoot]; theme via Compose only.
  * Composables do not call DataStore / LauncherApps / CalendarContract.
  */
@@ -46,14 +45,6 @@ class MainActivity : ComponentActivity() {
         SettingsViewModel.factory(
             launcherAppsRepository = app.container.launcherAppsRepository,
             preferencesRepository = app.container.preferencesRepository,
-        )
-    }
-
-    private val overlayViewModel: OverlayViewModel by viewModels {
-        val app = application as KvasirApp
-        OverlayViewModel.factory(
-            appContext = app.container.appContext,
-            launcherAppsRepository = app.container.launcherAppsRepository,
         )
     }
 
@@ -82,8 +73,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             val app = application as KvasirApp
             val themeMode by settingsViewModel.themeMode.collectAsStateWithLifecycle()
-            // RF-006-02, RF-006-04 — recompose MaterialTheme; never setDefaultNightMode.
-            // Spec 010 / RF-010-05 — icon loader for MonochromeAppIcon (used in T2/T3 rows).
             CompositionLocalProvider(
                 LocalAppIconLoader provides app.container.appIconLoader,
             ) {
@@ -92,7 +81,6 @@ class MainActivity : ComponentActivity() {
                         KvasirRoot(
                             homeViewModel = homeViewModel,
                             settingsViewModel = settingsViewModel,
-                            overlayViewModel = overlayViewModel,
                         )
                     }
                 }
@@ -109,7 +97,8 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        overlayViewModel.close()
+        // Spec 013 / RF-013-07 — warm Home returns to ★.
+        homeViewModel.resetToFavorites()
     }
 
     /** Spec 012 / RF-012-02 — system dialog once per process if not already granted. */

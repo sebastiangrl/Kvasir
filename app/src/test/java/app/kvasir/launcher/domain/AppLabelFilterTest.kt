@@ -1,5 +1,6 @@
 package app.kvasir.launcher.domain
 
+import app.kvasir.launcher.domain.model.HomeListMode
 import app.kvasir.launcher.domain.model.InstalledApp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -8,7 +9,8 @@ import org.junit.Test
 import java.util.Locale
 
 /**
- * Spec 008 / RF-008-01…04 — JVM tests for label substring filter and overlay policy.
+ * Spec 008 / RF-008-01…04 + Spec 013 / RF-013-02, RF-013-03, RF-013-06 —
+ * JVM tests for label substring filter, overlay policy, and Home modes.
  */
 class AppLabelFilterTest {
 
@@ -79,5 +81,48 @@ class AppLabelFilterTest {
         // RF-008-04
         val result = AppLabelFilter.filterOverlay(apps, "", 'A', Locale.US)
         assertEquals(listOf("Alpha", "Águila"), result.map { it.label })
+    }
+
+    @Test
+    fun filterHome_favoritesMode_blankQuery_returnsFavorites() {
+        val favorites = listOf(apps[0], apps[2])
+        val result = AppLabelFilter.filterHome(
+            installed = apps,
+            favorites = favorites,
+            query = "",
+            mode = HomeListMode.Favorites,
+            locale = Locale.US,
+        )
+        assertTrue(result.showingFavoritesChrome)
+        assertFalse(result.queryActive)
+        assertEquals(listOf("Alpha", "Google Maps"), result.apps.map { it.label })
+    }
+
+    @Test
+    fun filterHome_letterMode_filtersInstalled() {
+        val result = AppLabelFilter.filterHome(
+            installed = apps,
+            favorites = emptyList(),
+            query = "",
+            mode = HomeListMode.Letter('A'),
+            locale = Locale.US,
+        )
+        assertFalse(result.showingFavoritesChrome)
+        assertEquals(listOf("Alpha", "Águila"), result.apps.map { it.label })
+    }
+
+    @Test
+    fun filterHome_queryWinsOverLetterAndFavorites() {
+        val favorites = listOf(apps[0])
+        val result = AppLabelFilter.filterHome(
+            installed = apps,
+            favorites = favorites,
+            query = "map",
+            mode = HomeListMode.Letter('Z'),
+            locale = Locale.US,
+        )
+        assertFalse(result.showingFavoritesChrome)
+        assertTrue(result.queryActive)
+        assertEquals(listOf("Google Maps"), result.apps.map { it.label })
     }
 }

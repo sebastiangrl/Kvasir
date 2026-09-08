@@ -17,6 +17,7 @@ import app.kvasir.launcher.data.system.SystemPanels
 import app.kvasir.launcher.domain.AppLabelFilter
 import app.kvasir.launcher.domain.FavoritesResolver
 import app.kvasir.launcher.domain.model.Habit
+import app.kvasir.launcher.domain.model.HomeListMode
 import app.kvasir.launcher.domain.model.InstalledApp
 import app.kvasir.launcher.domain.model.NextCalendarEvent
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,8 +30,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * Spec 003 favorites + Spec 005 habits + Spec 008 / RF-008-01, RF-008-06 +
- * Spec 012 / RF-012-02, RF-012-04, RF-012-06 —
+ * Spec 003 favorites + Spec 005 habits + Spec 008 + Spec 012 +
+ * Spec 013 / RF-013-02, RF-013-03, RF-013-06, RF-013-07 —
  * Home UI state; Composables never call DataStore / LauncherApps / CalendarContract.
  */
 data class HomeHabitRow(
@@ -46,6 +47,16 @@ data class HomeUiState(
     val hasAnyFavorites: Boolean = false,
     val favoritesReady: Boolean = false,
     val habitRows: List<HomeHabitRow> = emptyList(),
+    /** Spec 013 — ★ or letter; ephemeral. */
+    val listMode: HomeListMode = HomeListMode.Favorites,
+    /**
+     * Spec 013 — apps for letter mode or global search (and ★ list when chrome).
+     * Prefer this over [favorites] for the primary list once scrubber UI lands (T2).
+     */
+    val catalogApps: List<InstalledApp> = emptyList(),
+    /** True only for ★ + blank query (clock / habits chrome). */
+    val showingFavoritesChrome: Boolean = true,
+    val isQueryActive: Boolean = false,
 )
 
 class HomeViewModel(
@@ -59,6 +70,8 @@ class HomeViewModel(
     private val defaultHomeCta = MutableStateFlow(false)
     /** Spec 008 / RF-008-05 — ephemeral; not persisted. */
     private val searchQuery = MutableStateFlow("")
+    /** Spec 013 — ★ vs letter; ephemeral. */
+    private val listMode = MutableStateFlow<HomeListMode>(HomeListMode.Favorites)
 
     /** Spec 012 — separate from uiState so clock tick / favorites do not share this refresh. */
     private val nextEventInternal = MutableStateFlow<NextCalendarEvent?>(null)
@@ -67,6 +80,7 @@ class HomeViewModel(
     private data class HomeBase(
         val showCta: Boolean,
         val resolvedFavorites: List<InstalledApp>,
+        val allApps: List<InstalledApp>,
         val favoritesReady: Boolean,
         val habitRows: List<HomeHabitRow>,
     )
@@ -86,6 +100,7 @@ class HomeViewModel(
             HomeBase(
                 showCta = showCta,
                 resolvedFavorites = resolved,
+                allApps = snapshot.apps,
                 favoritesReady = snapshot.appsLoaded,
                 habitRows = habits.map { habit ->
                     HomeHabitRow(
@@ -96,14 +111,27 @@ class HomeViewModel(
             )
         },
         searchQuery,
-    ) { base, query ->
+        listMode,
+    ) { base, query, mode ->
+        val homeFilter = AppLabelFilter.filterHome(
+            installed = base.allApps,
+            favorites = base.resolvedFavorites,
+            query = query,
+            mode = mode,
+        )
+        // Keep `favorites` as ★-scoped filter for pre-T2 HomeScreen (008).
+        val favoritesForLegacyUi = AppLabelFilter.filterByQuery(base.resolvedFavorites, query)
         HomeUiState(
             showDefaultHomeCta = base.showCta,
             searchQuery = query,
-            favorites = AppLabelFilter.filterByQuery(base.resolvedFavorites, query),
+            favorites = favoritesForLegacyUi,
             hasAnyFavorites = base.resolvedFavorites.isNotEmpty(),
             favoritesReady = base.favoritesReady,
             habitRows = base.habitRows,
+            listMode = mode,
+            catalogApps = homeFilter.apps,
+            showingFavoritesChrome = homeFilter.showingFavoritesChrome,
+            isQueryActive = homeFilter.queryActive,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -144,9 +172,21 @@ class HomeViewModel(
         launcherAppsRepository.launch(app)
     }
 
-    /** Spec 008 / RF-008-01 — ephemeral search query. */
+    /** Spec 008 / RF-008-01 — ephemeral search query (013: non-blank → global catalog). */
     fun setSearchQuery(query: String) {
         searchQuery.value = query
+    }
+
+    /** Spec 013 — scrubber letter; clears query so letter filter applies. */
+    fun selectLetter(letter: Char) {
+        searchQuery.value = ""
+        listMode.value = HomeListMode.Letter(letter)
+    }
+
+    /** Spec 013 / RF-013-07 — ★ + empty query (Back / onNewIntent). */
+    fun resetToFavorites() {
+        searchQuery.value = ""
+        listMode.value = HomeListMode.Favorites
     }
 
     /** Spec 009 / RF-009-01 — QS then notifications; no-op safe (outside Compose). */
