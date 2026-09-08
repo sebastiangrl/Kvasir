@@ -2,9 +2,10 @@ package app.kvasir.launcher
 
 import android.app.Application
 import app.kvasir.launcher.di.AppContainer
+import kotlinx.coroutines.launch
 
 /**
- * Spec 001 / RF-001-10 + Spec 002 / RF-002-11 —
+ * Spec 001 / RF-001-10 + Spec 002 / RF-002-11 + Spec 015 / RF-015-02 —
  * Application hosts the manual DI container and starts LauncherApps observation once.
  */
 class KvasirApp : Application() {
@@ -15,5 +16,9 @@ class KvasirApp : Application() {
         super.onCreate()
         container = AppContainer(this)
         container.launcherAppsRepository.start()
+        container.pomodoroNotifier.ensureChannel()
+        container.applicationScope.launch {
+            container.pomodoroController.rescheduleIfNeeded()
+        }
     }
 }

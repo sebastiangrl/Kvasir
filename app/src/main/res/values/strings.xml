@@ -18,4 +18,23 @@
     <string name="habit_add_action">Añadir</string>
     <string name="habit_delete_action">Eliminar</string>
     <string name="theme_dark">Tema oscuro</string>
+    <!-- Spec 015 — Pomodoro notifications (UI Home/Ajustes copy in T3). -->
+    <string name="pomodoro_channel_name">Pomodoro</string>
+    <string name="pomodoro_channel_description">Avisos al terminar trabajo, descanso o ciclo</string>
+    <string name="pomodoro_notify_work_done">Trabajo terminado</string>
+    <string name="pomodoro_notify_break_done">Descanso terminado</string>
+    <string name="pomodoro_notify_cycle_done">Ciclo Pomodoro completo</string>
+    <string name="pomodoro_notify_body">Pulsa para volver a Kvasir</string>
+    <string name="pomodoro_stop">Detener</string>
+    <string name="pomodoro_section">Pomodoro</string>
+    <string name="pomodoro_start">Iniciar</string>
+    <string name="pomodoro_pause">Pausar</string>
+    <string name="pomodoro_resume">Reanudar</string>
+    <string name="pomodoro_status_idle">Pomodoro</string>
+    <string name="pomodoro_status_work">Trabajo · %1$s</string>
+    <string name="pomodoro_status_break">Descanso · %1$s</string>
+    <string name="pomodoro_status_paused">Pausa · %1$s</string>
+    <string name="pomodoro_work_min">Trabajo (min)</string>
+    <string name="pomodoro_break_min">Descanso (min)</string>
+    <string name="pomodoro_sessions">Sesiones por ciclo</string>
 </resources>

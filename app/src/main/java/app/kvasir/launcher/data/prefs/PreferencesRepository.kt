@@ -9,11 +9,15 @@ import androidx.datastore.preferences.preferencesDataStore
 import app.kvasir.launcher.domain.HabitDayRoll
 import app.kvasir.launcher.domain.HabitHistoryOps
 import app.kvasir.launcher.domain.HabitJson
+import app.kvasir.launcher.domain.PomodoroJson
 import app.kvasir.launcher.domain.model.Habit
 import app.kvasir.launcher.domain.model.HabitDayState
 import app.kvasir.launcher.domain.model.HabitHistory
+import app.kvasir.launcher.domain.model.PomodoroConfig
+import app.kvasir.launcher.domain.model.PomodoroSession
 import app.kvasir.launcher.domain.model.ThemeMode
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 import java.util.UUID
@@ -25,7 +29,8 @@ private val Context.kvasirDataStore: DataStore<Preferences> by preferencesDataSt
 )
 
 /**
- * Spec 003 + Spec 005 + Spec 006 + Spec 014 / RF-014-01, RF-014-02, RF-014-07 —
+ * Spec 003 + Spec 005 + Spec 006 + Spec 014 / RF-014-01, RF-014-02, RF-014-07 +
+ * Spec 015 / RF-015-01, RF-015-02 —
  * Preferences DataStore; Application context only.
  */
 class PreferencesRepository(
@@ -60,6 +65,16 @@ class PreferencesRepository(
     /** Emits theme mode; missing/invalid → Light (RF-006-06). */
     val themeMode: Flow<ThemeMode> = dataStore.data.map { prefs ->
         ThemeMode.fromStorage(prefs[PreferencesKeys.THEME_MODE])
+    }
+
+    /** Spec 015 — Pomodoro config; missing/corrupt → defaults 25/5/4. */
+    val pomodoroConfig: Flow<PomodoroConfig> = dataStore.data.map { prefs ->
+        PomodoroJson.decodeConfig(prefs[PreferencesKeys.POMODORO_CONFIG_JSON])
+    }
+
+    /** Spec 015 — active session; missing/corrupt → idle. */
+    val pomodoroSession: Flow<PomodoroSession> = dataStore.data.map { prefs ->
+        PomodoroJson.decodeSession(prefs[PreferencesKeys.POMODORO_SESSION_JSON])
     }
 
     suspend fun addFavorite(componentKey: String) {
@@ -170,6 +185,25 @@ class PreferencesRepository(
             prefs[PreferencesKeys.THEME_MODE] = mode.storageValue
         }
     }
+
+    /** Spec 015 / RF-015-01 — persist clamped Pomodoro config. */
+    suspend fun setPomodoroConfig(config: PomodoroConfig) {
+        dataStore.edit { prefs ->
+            prefs[PreferencesKeys.POMODORO_CONFIG_JSON] =
+                PomodoroJson.encodeConfig(config.clamped())
+        }
+    }
+
+    /** Spec 015 / RF-015-02 — persist Pomodoro session (idle / running / paused). */
+    suspend fun setPomodoroSession(session: PomodoroSession) {
+        dataStore.edit { prefs ->
+            prefs[PreferencesKeys.POMODORO_SESSION_JSON] = PomodoroJson.encodeSession(session)
+        }
+    }
+
+    suspend fun getPomodoroConfig(): PomodoroConfig = pomodoroConfig.first()
+
+    suspend fun getPomodoroSession(): PomodoroSession = pomodoroSession.first()
 
     /**
      * If stored day ≠ today, append its completions to history (pruned), then return

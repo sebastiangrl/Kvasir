@@ -12,6 +12,7 @@ import app.kvasir.launcher.data.apps.LauncherAppsRepository
 import app.kvasir.launcher.data.calendar.CalendarEventNavigator
 import app.kvasir.launcher.data.calendar.CalendarEventsRepository
 import app.kvasir.launcher.data.home.DefaultHomeRepository
+import app.kvasir.launcher.data.pomodoro.PomodoroController
 import app.kvasir.launcher.data.prefs.PreferencesRepository
 import app.kvasir.launcher.data.system.SystemPanels
 import app.kvasir.launcher.domain.AppLabelFilter
@@ -21,9 +22,12 @@ import app.kvasir.launcher.domain.model.Habit
 import app.kvasir.launcher.domain.model.HomeListMode
 import app.kvasir.launcher.domain.model.InstalledApp
 import app.kvasir.launcher.domain.model.NextCalendarEvent
+import app.kvasir.launcher.domain.model.PomodoroSession
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
@@ -33,8 +37,8 @@ import java.time.LocalDate
 
 /**
  * Spec 003 favorites + Spec 005 habits + Spec 008 + Spec 012 + Spec 013 +
- * Spec 014 / RF-014-04 —
- * Home UI state; Composables never call DataStore / LauncherApps / CalendarContract.
+ * Spec 014 / RF-014-04 + Spec 015 / RF-015-03, RF-015-06, RF-015-07 —
+ * Home UI state; Composables never call DataStore / LauncherApps / CalendarContract / AlarmManager.
  */
 data class HomeHabitRow(
     val habit: Habit,
@@ -69,6 +73,7 @@ class HomeViewModel(
     private val launcherAppsRepository: LauncherAppsRepository,
     private val preferencesRepository: PreferencesRepository,
     private val calendarEventsRepository: CalendarEventsRepository,
+    private val pomodoroController: PomodoroController,
 ) : AndroidViewModel(application) {
 
     private val defaultHomeCta = MutableStateFlow(false)
@@ -80,6 +85,21 @@ class HomeViewModel(
     /** Spec 012 — separate from uiState so clock tick / favorites do not share this refresh. */
     private val nextEventInternal = MutableStateFlow<NextCalendarEvent?>(null)
     val nextEvent: StateFlow<NextCalendarEvent?> = nextEventInternal.asStateFlow()
+
+    /** Spec 015 / RF-015-03, RF-015-07 — session Flow isolated from clock 1 Hz. */
+    val pomodoroSession: StateFlow<PomodoroSession> =
+        preferencesRepository.pomodoroSession.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = PomodoroSession.Idle,
+        )
+
+    /**
+     * Spec 015 / RF-015-06 — Activity collects and requests POST_NOTIFICATIONS, then calls
+     * [onNotificationPermissionSettled] (granted or denied; timer still starts).
+     */
+    private val notificationPermissionRequestsInternal = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val notificationPermissionRequests = notificationPermissionRequestsInternal.asSharedFlow()
 
     private data class HomeAppsBase(
         val showCta: Boolean,
@@ -247,12 +267,42 @@ class HomeViewModel(
         }
     }
 
+    /** Spec 015 — ask notification permission (Activity), then start. */
+    fun startPomodoro() {
+        notificationPermissionRequestsInternal.tryEmit(Unit)
+    }
+
+    fun onNotificationPermissionSettled() {
+        viewModelScope.launch {
+            pomodoroController.start()
+        }
+    }
+
+    fun pausePomodoro() {
+        viewModelScope.launch {
+            pomodoroController.pause()
+        }
+    }
+
+    fun resumePomodoro() {
+        viewModelScope.launch {
+            pomodoroController.resume()
+        }
+    }
+
+    fun stopPomodoro() {
+        viewModelScope.launch {
+            pomodoroController.stop()
+        }
+    }
+
     companion object {
         fun factory(
             defaultHomeRepository: DefaultHomeRepository,
             launcherAppsRepository: LauncherAppsRepository,
             preferencesRepository: PreferencesRepository,
             calendarEventsRepository: CalendarEventsRepository,
+            pomodoroController: PomodoroController,
         ): ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
@@ -264,6 +314,7 @@ class HomeViewModel(
                         launcherAppsRepository = launcherAppsRepository,
                         preferencesRepository = preferencesRepository,
                         calendarEventsRepository = calendarEventsRepository,
+                        pomodoroController = pomodoroController,
                     )
                 }
             }

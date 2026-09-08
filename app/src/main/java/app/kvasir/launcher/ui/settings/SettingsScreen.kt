@@ -29,12 +29,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import app.kvasir.launcher.R
+import app.kvasir.launcher.domain.model.PomodoroConfig
 
 /**
- * Spec 003 + Spec 005 + Spec 006 + Spec 014 / RF-014-05 —
- * Favorites catalog + habit CRUD (+ streak / 7-day) + theme Switch; no DataStore / LauncherApps here.
+ * Spec 003 + Spec 005 + Spec 006 + Spec 014 / RF-014-05 + Spec 015 / RF-015-04 —
+ * Favorites, habits, theme, Pomodoro config; no DataStore / LauncherApps here.
  */
 @Composable
 fun SettingsScreen(
@@ -47,6 +49,10 @@ fun SettingsScreen(
     onRenameHabit: (habitId: String, label: String) -> Unit,
     darkTheme: Boolean,
     onDarkThemeChange: (Boolean) -> Unit,
+    pomodoroConfig: PomodoroConfig,
+    onPomodoroWorkMinutes: (Int) -> Unit,
+    onPomodoroBreakMinutes: (Int) -> Unit,
+    onPomodoroSessions: (Int) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -95,6 +101,25 @@ fun SettingsScreen(
                         onCheckedChange = onDarkThemeChange,
                     )
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            item(key = "pomodoro_header") {
+                Text(
+                    text = stringResource(R.string.pomodoro_section),
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+
+            item(key = "pomodoro_fields") {
+                PomodoroConfigFields(
+                    config = pomodoroConfig,
+                    onWorkMinutes = onPomodoroWorkMinutes,
+                    onBreakMinutes = onPomodoroBreakMinutes,
+                    onSessions = onPomodoroSessions,
+                )
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
@@ -228,6 +253,80 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(24.dp))
             }
         }
+    }
+}
+
+@Composable
+private fun PomodoroConfigFields(
+    config: PomodoroConfig,
+    onWorkMinutes: (Int) -> Unit,
+    onBreakMinutes: (Int) -> Unit,
+    onSessions: (Int) -> Unit,
+) {
+    var workDraft by remember { mutableStateOf(config.workMinutes.toString()) }
+    var breakDraft by remember { mutableStateOf(config.breakMinutes.toString()) }
+    var sessionsDraft by remember { mutableStateOf(config.sessionsPerCycle.toString()) }
+    LaunchedEffect(config.workMinutes, config.breakMinutes, config.sessionsPerCycle) {
+        workDraft = config.workMinutes.toString()
+        breakDraft = config.breakMinutes.toString()
+        sessionsDraft = config.sessionsPerCycle.toString()
+    }
+    val focusManager = LocalFocusManager.current
+
+    fun commitInt(raw: String, fallback: Int, onCommit: (Int) -> Unit) {
+        val value = raw.toIntOrNull() ?: fallback
+        onCommit(value)
+        focusManager.clearFocus()
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        OutlinedTextField(
+            value = workDraft,
+            onValueChange = { workDraft = it.filter { ch -> ch.isDigit() }.take(3) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            label = { Text(stringResource(R.string.pomodoro_work_min)) },
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Number,
+                imeAction = ImeAction.Done,
+            ),
+            keyboardActions = KeyboardActions(
+                onDone = { commitInt(workDraft, config.workMinutes, onWorkMinutes) },
+            ),
+        )
+        OutlinedTextField(
+            value = breakDraft,
+            onValueChange = { breakDraft = it.filter { ch -> ch.isDigit() }.take(3) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            label = { Text(stringResource(R.string.pomodoro_break_min)) },
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Number,
+                imeAction = ImeAction.Done,
+            ),
+            keyboardActions = KeyboardActions(
+                onDone = { commitInt(breakDraft, config.breakMinutes, onBreakMinutes) },
+            ),
+        )
+        OutlinedTextField(
+            value = sessionsDraft,
+            onValueChange = { sessionsDraft = it.filter { ch -> ch.isDigit() }.take(2) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            label = { Text(stringResource(R.string.pomodoro_sessions)) },
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Number,
+                imeAction = ImeAction.Done,
+            ),
+            keyboardActions = KeyboardActions(
+                onDone = { commitInt(sessionsDraft, config.sessionsPerCycle, onSessions) },
+            ),
+        )
     }
 }
 
