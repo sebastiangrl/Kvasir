@@ -49,9 +49,11 @@ import app.kvasir.launcher.ui.icons.MonochromeAppIcon
 import kotlinx.coroutines.delay
 
 /**
- * Spec 003–012 + Spec 013 / RF-013-01…04 + Spec 015 / RF-015-03, RF-015-07 —
- * Unified Home: ★ chrome or letter/search catalog + scrubber rail + Pomodoro block.
- * No DataStore / PackageManager / LauncherApps / CalendarContract / AlarmManager here.
+ * Spec 003–012 + Spec 013 / RF-013-01…04 + Spec 015 / RF-015-03, RF-015-07 +
+ * Spec 017 / RF-017-04…06 —
+ * Unified Home: ★ chrome or letter/search catalog + scrubber rail + Pomodoro + badges.
+ * No DataStore / PackageManager / LauncherApps / CalendarContract / AlarmManager /
+ * NotificationListener here.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -84,6 +86,8 @@ fun HomeScreen(
     onPomodoroPause: () -> Unit = {},
     onPomodoroResume: () -> Unit = {},
     onPomodoroStop: () -> Unit = {},
+    /** Spec 017 — packages with badge; only applied to ★ favorites rows. */
+    badgedPackages: Set<String> = emptySet(),
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -132,6 +136,7 @@ fun HomeScreen(
                         onPomodoroPause = onPomodoroPause,
                         onPomodoroResume = onPomodoroResume,
                         onPomodoroStop = onPomodoroStop,
+                        badgedPackages = badgedPackages,
                     )
                 } else {
                     CatalogHomeBody(
@@ -178,6 +183,7 @@ private fun FavoritesHomeBody(
     onPomodoroPause: () -> Unit,
     onPomodoroResume: () -> Unit,
     onPomodoroStop: () -> Unit,
+    badgedPackages: Set<String>,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         HomeClock()
@@ -261,6 +267,7 @@ private fun FavoritesHomeBody(
                                 app = app,
                                 onClick = { onFavoriteClick(app) },
                                 onLongClick = { onFavoriteLongClick(app) },
+                                showBadge = app.packageName in badgedPackages,
                             )
                         }
                     }
@@ -401,6 +408,7 @@ private fun CatalogHomeBody(
                             app = app,
                             onClick = { onAppClick(app) },
                             onLongClick = { onAppLongClick(app) },
+                            showBadge = false,
                         )
                     }
                 }
@@ -415,6 +423,7 @@ private fun AppRow(
     app: InstalledApp,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
+    showBadge: Boolean = false,
 ) {
     Row(
         modifier = Modifier
@@ -429,7 +438,11 @@ private fun AppRow(
         MonochromeAppIcon(app = app)
         Spacer(modifier = Modifier.width(12.dp))
         Text(
-            text = app.label,
+            text = if (showBadge) {
+                stringResource(R.string.home_app_badge_label, app.label)
+            } else {
+                app.label
+            },
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurface,
         )

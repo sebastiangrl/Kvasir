@@ -41,6 +41,7 @@ fun KvasirRoot(
                 val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
                 val nextEvent by homeViewModel.nextEvent.collectAsStateWithLifecycle()
                 val pomodoroSession by homeViewModel.pomodoroSession.collectAsStateWithLifecycle()
+                val badgedPackages by homeViewModel.badgedPackages.collectAsStateWithLifecycle()
                 val leaveFavoritesChrome =
                     uiState.isQueryActive || uiState.listMode !is HomeListMode.Favorites
                 // Spec 013 / RF-013-07 — Back from letter/query → ★ (do not finish Activity).
@@ -79,6 +80,7 @@ fun KvasirRoot(
                     onPomodoroPause = homeViewModel::pausePomodoro,
                     onPomodoroResume = homeViewModel::resumePomodoro,
                     onPomodoroStop = homeViewModel::stopPomodoro,
+                    badgedPackages = badgedPackages,
                 )
             }
             RootDestination.Settings -> {
@@ -108,6 +110,7 @@ fun KvasirRoot(
                     onOpenAppDetailsSettings = settingsViewModel::openAppDetailsSettings,
                     onOpenNotificationSettings = settingsViewModel::openNotificationSettings,
                     onOpenExactAlarmSettings = settingsViewModel::openExactAlarmSettings,
+                    onOpenNotificationListenerSettings = settingsViewModel::openNotificationListenerSettings,
                     onBack = {
                         if (!settingsViewModel.navigateBackWithinSettings()) {
                             destination = RootDestination.Home

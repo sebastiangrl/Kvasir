@@ -37,6 +37,8 @@
     <string name="pomodoro_work_min">Trabajo (min)</string>
     <string name="pomodoro_break_min">Descanso (min)</string>
     <string name="pomodoro_sessions">Sesiones por ciclo</string>
+    <!-- Spec 017 — badge marker next to favorite label. -->
+    <string name="home_app_badge_label">%1$s •</string>
     <!-- Spec 016 — Settings hub sections. -->
     <string name="settings_section_appearance">Apariencia</string>
     <string name="settings_section_appearance_sub">Tema claro u oscuro</string>
@@ -45,12 +47,13 @@
     <string name="settings_section_favorites_sub">Apps en la pantalla de inicio</string>
     <string name="settings_section_habits_sub">Alta, baja y rachas</string>
     <string name="settings_section_permissions">Permisos e Inicio</string>
-    <string name="settings_section_permissions_sub">Calendario, notificaciones, app de Inicio</string>
+    <string name="settings_section_permissions_sub">Calendario, avisos, acceso a notificaciones, Inicio</string>
     <string name="settings_perm_home">App de Inicio</string>
     <string name="settings_perm_home_yes">Es la app de Inicio</string>
     <string name="settings_perm_home_no">No es la app de Inicio</string>
     <string name="settings_perm_calendar">Calendario</string>
-    <string name="settings_perm_notifications">Notificaciones</string>
+    <string name="settings_perm_notifications">Notificaciones (avisos de Kvasir)</string>
+    <string name="settings_perm_notification_access">Acceso a notificaciones</string>
     <string name="settings_perm_exact_alarms">Alarmas exactas</string>
     <string name="settings_perm_granted">Concedido</string>
     <string name="settings_perm_denied">Denegado</string>

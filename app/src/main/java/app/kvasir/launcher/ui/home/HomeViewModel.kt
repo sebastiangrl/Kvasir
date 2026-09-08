@@ -12,6 +12,7 @@ import app.kvasir.launcher.data.apps.LauncherAppsRepository
 import app.kvasir.launcher.data.calendar.CalendarEventNavigator
 import app.kvasir.launcher.data.calendar.CalendarEventsRepository
 import app.kvasir.launcher.data.home.DefaultHomeRepository
+import app.kvasir.launcher.data.notifications.NotificationBadgeRepository
 import app.kvasir.launcher.data.pomodoro.PomodoroController
 import app.kvasir.launcher.data.prefs.PreferencesRepository
 import app.kvasir.launcher.data.system.SystemPanels
@@ -37,8 +38,10 @@ import java.time.LocalDate
 
 /**
  * Spec 003 favorites + Spec 005 habits + Spec 008 + Spec 012 + Spec 013 +
- * Spec 014 / RF-014-04 + Spec 015 / RF-015-03, RF-015-06, RF-015-07 —
- * Home UI state; Composables never call DataStore / LauncherApps / CalendarContract / AlarmManager.
+ * Spec 014 / RF-014-04 + Spec 015 / RF-015-03, RF-015-06, RF-015-07 +
+ * Spec 017 / RF-017-04, RF-017-05, RF-017-06 —
+ * Home UI state; Composables never call DataStore / LauncherApps / CalendarContract /
+ * AlarmManager / NotificationListener.
  */
 data class HomeHabitRow(
     val habit: Habit,
@@ -74,6 +77,7 @@ class HomeViewModel(
     private val preferencesRepository: PreferencesRepository,
     private val calendarEventsRepository: CalendarEventsRepository,
     private val pomodoroController: PomodoroController,
+    notificationBadgeRepository: NotificationBadgeRepository,
 ) : AndroidViewModel(application) {
 
     private val defaultHomeCta = MutableStateFlow(false)
@@ -92,6 +96,17 @@ class HomeViewModel(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = PomodoroSession.Idle,
+        )
+
+    /**
+     * Spec 017 / RF-017-04, RF-017-06 — packages with badge; isolated from clock 1 Hz.
+     * Empty when listener disabled / disconnected.
+     */
+    val badgedPackages: StateFlow<Set<String>> =
+        notificationBadgeRepository.badgedPackages.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptySet(),
         )
 
     /**
@@ -303,6 +318,7 @@ class HomeViewModel(
             preferencesRepository: PreferencesRepository,
             calendarEventsRepository: CalendarEventsRepository,
             pomodoroController: PomodoroController,
+            notificationBadgeRepository: NotificationBadgeRepository,
         ): ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
@@ -315,6 +331,7 @@ class HomeViewModel(
                         preferencesRepository = preferencesRepository,
                         calendarEventsRepository = calendarEventsRepository,
                         pomodoroController = pomodoroController,
+                        notificationBadgeRepository = notificationBadgeRepository,
                     )
                 }
             }

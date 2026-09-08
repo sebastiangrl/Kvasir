@@ -34,12 +34,12 @@ Siguiente número libre en tres dígitos (`001`, `002`, …). No reutilizar núm
 | `014` | Rachas / historial de hábitos |
 | `015` | Pomodoro (sesiones + notificación al terminar) |
 | `016` | Ajustes organizados (secciones in-app; hub de permisos) |
+| `017` | Badges de notificación |
 
 ## Backlog sugerido (aún no escrito)
 
 | Spec | Tema |
 | --- | --- |
-| `017` | Badges |
 | `018` | Work profile |
 | `019` | Atajos |
 | `020` | Per-app theming |
@@ -48,7 +48,7 @@ Siguiente número libre en tres dígitos (`001`, `002`, …). No reutilizar núm
 - Carpetas-grupo de apps (tipo carpeta “Social”) → sustituido por scrubber unificado (013).
 - Host de widgets de terceros en Home → sustituido por Pomodoro propio (015).
 
-No escribir estas specs hasta que el usuario pida «especifica X» en PLAN. Siguiente número libre: **017**.
+No escribir estas specs hasta que el usuario pida «especifica X» en PLAN. Siguiente número libre: **018**.
 
 ## Contrato
 

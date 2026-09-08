@@ -8,7 +8,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Spec 016 / RF-016-01, RF-016-04 — section enum + settings intent builders (JVM).
+ * Spec 016 / RF-016-01, RF-016-04 + Spec 017 / RF-017-03 — section enum + settings intent builders (JVM).
  */
 class AppSettingsNavigatorTest {
 
@@ -43,6 +43,14 @@ class AppSettingsNavigatorTest {
         assertEquals(
             "android.settings.REQUEST_SCHEDULE_EXACT_ALARM",
             Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+        )
+    }
+
+    @Test
+    fun notificationListenerSettings_usesSystemActionConstant() {
+        assertEquals(
+            "android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS",
+            Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS,
         )
     }
 }

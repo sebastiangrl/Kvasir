@@ -65,6 +65,7 @@ fun SettingsScreen(
     onOpenAppDetailsSettings: () -> Unit,
     onOpenNotificationSettings: () -> Unit,
     onOpenExactAlarmSettings: () -> Unit,
+    onOpenNotificationListenerSettings: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -130,6 +131,7 @@ fun SettingsScreen(
                 onOpenAppDetailsSettings = onOpenAppDetailsSettings,
                 onOpenNotificationSettings = onOpenNotificationSettings,
                 onOpenExactAlarmSettings = onOpenExactAlarmSettings,
+                onOpenNotificationListenerSettings = onOpenNotificationListenerSettings,
             )
         }
     }
@@ -379,7 +381,7 @@ private fun HabitsSection(
     }
 }
 
-/** Spec 016 / RF-016-04 — permission rows + CTAs (state from ViewModel). */
+/** Spec 016 / RF-016-04 + Spec 017 / RF-017-03 — permission rows + CTAs (state from ViewModel). */
 @Composable
 private fun PermissionsSection(
     status: PermissionsStatus,
@@ -389,6 +391,7 @@ private fun PermissionsSection(
     onOpenAppDetailsSettings: () -> Unit,
     onOpenNotificationSettings: () -> Unit,
     onOpenExactAlarmSettings: () -> Unit,
+    onOpenNotificationListenerSettings: () -> Unit,
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         item(key = "perm_home") {
@@ -449,6 +452,22 @@ private fun PermissionsSection(
                     null
                 },
                 onSecondaryAction = onOpenNotificationSettings,
+            )
+        }
+        item(key = "perm_notification_listener") {
+            PermissionRow(
+                title = stringResource(R.string.settings_perm_notification_access),
+                statusText = if (status.notificationListenerGranted) {
+                    stringResource(R.string.settings_perm_granted)
+                } else {
+                    stringResource(R.string.settings_perm_denied)
+                },
+                primaryActionLabel = if (!status.notificationListenerGranted) {
+                    stringResource(R.string.settings_perm_open_settings)
+                } else {
+                    null
+                },
+                onPrimaryAction = onOpenNotificationListenerSettings,
             )
         }
         if (status.exactAlarmApplicable) {

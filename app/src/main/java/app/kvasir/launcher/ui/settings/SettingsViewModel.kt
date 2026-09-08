@@ -84,6 +84,7 @@ class SettingsViewModel(
             isDefaultHome = false,
             calendarGranted = false,
             notificationsGranted = false,
+            notificationListenerGranted = false,
             exactAlarmApplicable = false,
             exactAlarmGranted = true,
         ),
@@ -225,6 +226,11 @@ class SettingsViewModel(
             getApplication(),
             getApplication<Application>().packageName,
         )
+    }
+
+    /** Spec 017 / RF-017-03 — enable NotificationListenerService in system settings. */
+    fun openNotificationListenerSettings() {
+        AppSettingsNavigator.openNotificationListenerSettings(getApplication())
     }
 
     fun setFavorite(componentKey: String, favorite: Boolean) {
