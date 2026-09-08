@@ -19,3 +19,8 @@ out/
 .DS_Store
 *.log
 .kotlin/
+
+# Spec 007 / RF-007-04 — release signing (never commit secrets)
+keystore.properties
+*.jks
+*.keystore
