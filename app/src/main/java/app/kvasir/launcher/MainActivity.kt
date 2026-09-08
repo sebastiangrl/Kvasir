@@ -7,15 +7,20 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kvasir.launcher.domain.model.ThemeMode
@@ -25,9 +30,11 @@ import app.kvasir.launcher.ui.icons.LocalAppIconLoader
 import app.kvasir.launcher.ui.settings.SettingsRuntimePermission
 import app.kvasir.launcher.ui.settings.SettingsViewModel
 import app.kvasir.launcher.ui.theme.KvasirTheme
+import app.kvasir.launcher.ui.theme.kvasirScreenGradient
 
 /**
- * Spec 001–006 + Spec 010 + Spec 012 + Spec 013 + Spec 015 + Spec 016 / RF-016-04 —
+ * Spec 001–006 + Spec 010 + Spec 012 + Spec 013 + Spec 015 + Spec 016 / RF-016-04 +
+ * Spec 019 / RF-019-01, RF-019-05 —
  * HOME Activity hosts [KvasirRoot]; theme via Compose only.
  * Composables do not call DataStore / LauncherApps / CalendarContract / AlarmManager.
  */
@@ -90,6 +97,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Spec 019 / RF-019-01 — draw under status/nav; bars stay transparent.
+        enableEdgeToEdge()
 
         // RF-001-05 — on Home, consume Back; stay on Home (do not finish).
         onBackPressedDispatcher.addCallback(
@@ -127,11 +136,22 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            val darkTheme = themeMode == ThemeMode.Dark
+            DisposableEffect(darkTheme) {
+                applyTransparentSystemBars(darkTheme)
+                onDispose { }
+            }
+
             CompositionLocalProvider(
                 LocalAppIconLoader provides app.container.appIconLoader,
             ) {
-                KvasirTheme(darkTheme = themeMode == ThemeMode.Dark) {
-                    Surface(modifier = Modifier.fillMaxSize()) {
+                KvasirTheme(darkTheme = darkTheme) {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(kvasirScreenGradient(darkTheme)),
+                        color = Color.Transparent,
+                    ) {
                         KvasirRoot(
                             homeViewModel = homeViewModel,
                             settingsViewModel = settingsViewModel,
@@ -166,6 +186,23 @@ class MainActivity : ComponentActivity() {
         if (calendarPermissionRequestedThisProcess) return
         calendarPermissionRequestedThisProcess = true
         requestCalendarPermission.launch(Manifest.permission.READ_CALENDAR)
+    }
+
+    /** Spec 019 / RF-019-01 — icons follow ThemeMode, not system night (006 is Compose-only). */
+    private fun applyTransparentSystemBars(darkTheme: Boolean) {
+        val transparent = android.graphics.Color.TRANSPARENT
+        enableEdgeToEdge(
+            statusBarStyle = if (darkTheme) {
+                SystemBarStyle.dark(transparent)
+            } else {
+                SystemBarStyle.light(transparent, transparent)
+            },
+            navigationBarStyle = if (darkTheme) {
+                SystemBarStyle.dark(transparent)
+            } else {
+                SystemBarStyle.light(transparent, transparent)
+            },
+        )
     }
 
     /** Spec 015 / RF-015-06 — request only when needed; always start afterward. */

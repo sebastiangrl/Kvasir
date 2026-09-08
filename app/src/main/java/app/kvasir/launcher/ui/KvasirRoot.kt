@@ -18,7 +18,7 @@ import app.kvasir.launcher.ui.settings.SettingsViewModel
 
 /**
  * Spec 003 + Spec 008 + Spec 009 + Spec 012 + Spec 013 + Spec 015 + Spec 016 +
- * Spec 018 —
+ * Spec 018 + Spec 019 —
  * Home (Niagara scrubber) | Settings hub. Overlay A–Z removed (RF-013-05).
  */
 @Composable

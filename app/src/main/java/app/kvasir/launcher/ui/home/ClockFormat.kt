@@ -7,16 +7,19 @@ import java.time.format.FormatStyle
 import java.util.Locale
 
 /**
- * Spec 001 / RF-001-06 + Spec 011 / RF-011-01…03 —
+ * Spec 001 / RF-001-06 + Spec 011 / RF-011-01…03 + Spec 019 / RF-019-06 —
  * Pure clock/date formatting (locale-aware; JVM-testable).
  */
 object ClockFormat {
+    /**
+     * Spec 019 / RF-019-06 — SHORT time (hour + minute; no seconds).
+     */
     fun formatTime(
         instant: Instant,
         zoneId: ZoneId = ZoneId.systemDefault(),
         locale: Locale = Locale.getDefault(),
     ): String {
-        val formatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.MEDIUM).withLocale(locale)
+        val formatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale)
         return formatter.format(instant.atZone(zoneId))
     }
 
@@ -39,14 +42,14 @@ object ClockFormat {
     }
 
     /**
-     * Spec 011 / RF-011-02, RF-011-03 — short date (day + month), not FormatStyle.FULL.
+     * Spec 019 / RF-019-06 — month + day (e.g. SEP 8), uppercased; no year.
      */
     fun formatDate(
         instant: Instant,
         zoneId: ZoneId = ZoneId.systemDefault(),
         locale: Locale = Locale.getDefault(),
     ): String {
-        val formatter = DateTimeFormatter.ofPattern("d MMM", locale)
-        return formatter.format(instant.atZone(zoneId))
+        val formatter = DateTimeFormatter.ofPattern("MMM d", locale)
+        return formatter.format(instant.atZone(zoneId)).uppercase(locale)
     }
 }

@@ -10,8 +10,9 @@ import android.util.LruCache
 import app.kvasir.launcher.domain.model.InstalledApp
 
 /**
- * Spec 010 / RF-010-03, RF-010-05, RF-010-06 —
+ * Spec 010 / RF-010-03, RF-010-05, RF-010-06 + Spec 019 / RF-019-02 —
  * Loads activity icons via LauncherApps (Application context). Bounded LRU of Drawables.
+ * Silhouette (adaptive foreground) is applied at draw time in [IconSilhouette].
  */
 class AppIconLoader(
     context: Context,
