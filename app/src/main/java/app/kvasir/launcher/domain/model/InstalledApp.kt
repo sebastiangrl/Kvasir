@@ -1,8 +1,8 @@
 package app.kvasir.launcher.domain.model
 
 /**
- * Spec 002 / RF-002-01 — launchable app without icons/Bitmaps.
- * [componentKey] is the stable identity for favorites (003) and UI keys.
+ * Spec 002 / RF-002-01 — launchable app identity + label.
+ * Spec 010 — icons are loaded via [app.kvasir.launcher.data.apps.AppIconLoader], not stored here.
  */
 data class InstalledApp(
     val packageName: String,
