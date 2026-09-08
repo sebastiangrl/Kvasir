@@ -58,6 +58,8 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    // Spec 003 / RF-003-01 — Preferences DataStore for favorite keys
+    implementation(libs.androidx.datastore.preferences)
 
     testImplementation(libs.junit)
 }

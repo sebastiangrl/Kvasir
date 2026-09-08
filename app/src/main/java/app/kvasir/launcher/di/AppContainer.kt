@@ -3,12 +3,13 @@ package app.kvasir.launcher.di
 import android.content.Context
 import app.kvasir.launcher.data.apps.LauncherAppsRepository
 import app.kvasir.launcher.data.home.DefaultHomeRepository
+import app.kvasir.launcher.data.prefs.PreferencesRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 
 /**
- * Spec 001 / RF-001-10 + Spec 002 / RF-002-11 —
+ * Spec 001 / RF-001-10 + Spec 002 / RF-002-11 + Spec 003 / RF-003-01 —
  * Manual DI; Application context only (no Activity leaks).
  */
 class AppContainer(
@@ -28,4 +29,7 @@ class AppContainer(
             context = appContext,
             scope = applicationScope,
         )
+
+    val preferencesRepository: PreferencesRepository =
+        PreferencesRepository(appContext)
 }

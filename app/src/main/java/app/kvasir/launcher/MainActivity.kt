@@ -8,16 +8,15 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.kvasir.launcher.ui.home.HomeScreen
+import app.kvasir.launcher.ui.KvasirRoot
 import app.kvasir.launcher.ui.home.HomeViewModel
+import app.kvasir.launcher.ui.settings.SettingsViewModel
 import app.kvasir.launcher.ui.theme.KvasirTheme
 
 /**
- * Spec 001 + Spec 002 — HOME Activity.
- * Composables do not call PackageManager / LauncherApps.
+ * Spec 001 + Spec 003 / RF-003-05, RF-003-07 —
+ * HOME Activity hosts [KvasirRoot]; Composables do not call DataStore / LauncherApps.
  */
 class MainActivity : ComponentActivity() {
 
@@ -26,13 +25,23 @@ class MainActivity : ComponentActivity() {
         HomeViewModel.factory(
             defaultHomeRepository = app.container.defaultHomeRepository,
             launcherAppsRepository = app.container.launcherAppsRepository,
+            preferencesRepository = app.container.preferencesRepository,
+        )
+    }
+
+    private val settingsViewModel: SettingsViewModel by viewModels {
+        val app = application as KvasirApp
+        SettingsViewModel.factory(
+            launcherAppsRepository = app.container.launcherAppsRepository,
+            preferencesRepository = app.container.preferencesRepository,
         )
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // RF-001-05 — consume Back / predictive back; stay on Home.
+        // RF-001-05 — on Home, consume Back; stay on Home (do not finish).
+        // Settings Back is handled by BackHandler inside KvasirRoot (RF-003-05).
         onBackPressedDispatcher.addCallback(
             this,
             object : OnBackPressedCallback(enabled = true) {
@@ -43,15 +52,11 @@ class MainActivity : ComponentActivity() {
         )
 
         setContent {
-            val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
             KvasirTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    HomeScreen(
-                        showDefaultHomeCta = uiState.showDefaultHomeCta,
-                        onChooseHomeClick = homeViewModel::openHomePicker,
-                        installedApps = uiState.installedApps,
-                        appsLoaded = uiState.appsLoaded,
-                        onAppClick = homeViewModel::launchApp,
+                    KvasirRoot(
+                        homeViewModel = homeViewModel,
+                        settingsViewModel = settingsViewModel,
                     )
                 }
             }

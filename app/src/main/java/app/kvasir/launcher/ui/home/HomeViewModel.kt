@@ -9,6 +9,8 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import app.kvasir.launcher.data.apps.LauncherAppsRepository
 import app.kvasir.launcher.data.home.DefaultHomeRepository
+import app.kvasir.launcher.data.prefs.PreferencesRepository
+import app.kvasir.launcher.domain.FavoritesResolver
 import app.kvasir.launcher.domain.model.InstalledApp
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -18,19 +20,20 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 
 /**
- * Spec 001 CTA + Spec 002 / RF-002-08, RF-002-09, RF-002-10 —
- * Home UI state; Composables never call LauncherApps / PackageManager.
+ * Spec 001 CTA + Spec 003 / RF-003-02, RF-003-03, RF-003-04, RF-003-06, RF-003-07 —
+ * Home shows resolved favorites only; Composables never call DataStore / LauncherApps.
  */
 data class HomeUiState(
     val showDefaultHomeCta: Boolean = false,
-    val installedApps: List<InstalledApp> = emptyList(),
-    val appsLoaded: Boolean = false,
+    val favorites: List<InstalledApp> = emptyList(),
+    val favoritesReady: Boolean = false,
 )
 
 class HomeViewModel(
     application: Application,
     private val defaultHomeRepository: DefaultHomeRepository,
     private val launcherAppsRepository: LauncherAppsRepository,
+    preferencesRepository: PreferencesRepository,
 ) : AndroidViewModel(application) {
 
     private val defaultHomeCta = MutableStateFlow(false)
@@ -38,11 +41,15 @@ class HomeViewModel(
     val uiState: StateFlow<HomeUiState> = combine(
         defaultHomeCta,
         launcherAppsRepository.snapshot,
-    ) { showCta, snapshot ->
+        preferencesRepository.favoriteKeys,
+    ) { showCta, snapshot, favoriteKeys ->
         HomeUiState(
             showDefaultHomeCta = showCta,
-            installedApps = snapshot.apps,
-            appsLoaded = snapshot.appsLoaded,
+            favorites = FavoritesResolver.resolve(
+                favoriteKeys = favoriteKeys,
+                installed = snapshot.apps,
+            ),
+            favoritesReady = snapshot.appsLoaded,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -63,7 +70,7 @@ class HomeViewModel(
         getApplication<Application>().startActivity(intent)
     }
 
-    /** RF-002-07 — launch via repository (safe for Home process). */
+    /** RF-003-03 — launch via repository (safe for Home process). */
     fun launchApp(app: InstalledApp) {
         launcherAppsRepository.launch(app)
     }
@@ -72,6 +79,7 @@ class HomeViewModel(
         fun factory(
             defaultHomeRepository: DefaultHomeRepository,
             launcherAppsRepository: LauncherAppsRepository,
+            preferencesRepository: PreferencesRepository,
         ): ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
@@ -81,6 +89,7 @@ class HomeViewModel(
                         application = application,
                         defaultHomeRepository = defaultHomeRepository,
                         launcherAppsRepository = launcherAppsRepository,
+                        preferencesRepository = preferencesRepository,
                     )
                 }
             }
