@@ -7,9 +7,11 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import app.kvasir.launcher.data.apps.AppDetailsNavigator
 import app.kvasir.launcher.data.apps.LauncherAppsRepository
 import app.kvasir.launcher.data.home.DefaultHomeRepository
 import app.kvasir.launcher.data.prefs.PreferencesRepository
+import app.kvasir.launcher.data.system.SystemPanels
 import app.kvasir.launcher.domain.AppLabelFilter
 import app.kvasir.launcher.domain.FavoritesResolver
 import app.kvasir.launcher.domain.model.Habit
@@ -120,6 +122,16 @@ class HomeViewModel(
     /** Spec 008 / RF-008-01 — ephemeral search query. */
     fun setSearchQuery(query: String) {
         searchQuery.value = query
+    }
+
+    /** Spec 009 / RF-009-01 — QS then notifications; no-op safe (outside Compose). */
+    fun expandSystemPanel() {
+        SystemPanels.expandPreferredPanel(getApplication())
+    }
+
+    /** Spec 009 / RF-009-04, RF-009-05 — system app details; does not mutate favorites. */
+    fun openAppDetails(app: InstalledApp) {
+        AppDetailsNavigator.open(getApplication(), app.packageName)
     }
 
     /** RF-005-03 — persist habit completion immediately. */

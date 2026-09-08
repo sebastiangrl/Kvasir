@@ -1,6 +1,8 @@
 package app.kvasir.launcher.ui.home
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,10 +31,11 @@ import app.kvasir.launcher.domain.model.InstalledApp
 import app.kvasir.launcher.ui.gesture.onVerticalSwipe
 
 /**
- * Spec 003 + 004 + 005 + Spec 008 / RF-008-01, RF-008-06 —
- * Home: clock (isolated), search favorites, habits; swipe-up opens overlay.
- * No DataStore / PackageManager / LauncherApps calls here.
+ * Spec 003–005 + 008 + Spec 009 / RF-009-01, RF-009-03, RF-009-04 —
+ * Home: clock, search, habits; swipes; long-press favorite → app details.
+ * No DataStore / PackageManager / LauncherApps / StatusBar calls here.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     showDefaultHomeCta: Boolean,
@@ -43,17 +46,22 @@ fun HomeScreen(
     hasAnyFavorites: Boolean,
     favoritesReady: Boolean,
     onFavoriteClick: (InstalledApp) -> Unit,
+    onFavoriteLongClick: (InstalledApp) -> Unit,
     habitRows: List<HomeHabitRow>,
     onHabitCheckedChange: (habitId: String, completed: Boolean) -> Unit,
     onSettingsClick: () -> Unit,
     onOpenOverlay: () -> Unit,
+    onExpandSystemPanel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(
         modifier = modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .onVerticalSwipe(onSwipeUp = onOpenOverlay),
+            .onVerticalSwipe(
+                onSwipeUp = onOpenOverlay,
+                onSwipeDown = onExpandSystemPanel,
+            ),
     ) {
         Column(
             modifier = Modifier
@@ -137,7 +145,10 @@ fun HomeScreen(
                                     text = app.label,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable { onFavoriteClick(app) }
+                                        .combinedClickable(
+                                            onClick = { onFavoriteClick(app) },
+                                            onLongClick = { onFavoriteLongClick(app) },
+                                        )
                                         .padding(horizontal = 24.dp, vertical = 12.dp),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurface,

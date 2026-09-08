@@ -44,6 +44,7 @@ class MainActivity : ComponentActivity() {
     private val overlayViewModel: OverlayViewModel by viewModels {
         val app = application as KvasirApp
         OverlayViewModel.factory(
+            appContext = app.container.appContext,
             launcherAppsRepository = app.container.launcherAppsRepository,
         )
     }
