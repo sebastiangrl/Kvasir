@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Spec 001 + Spec 003 + Spec 004 + Spec 005 / RF-005-06 -->
+<!-- Spec 001 + Spec 003 + Spec 004 + Spec 005 / RF-005-06 + Spec 008 / RF-008-01 -->
 <resources>
     <string name="app_name">Kvasir</string>
     <string name="home_empty_favorites">Sin favoritas todavía.</string>
@@ -10,6 +10,8 @@
     <string name="choose_favorites">Elegir favoritas</string>
     <string name="apps_installed_empty">No se encontraron apps.</string>
     <string name="overlay_letter_empty">Ninguna app con esta letra.</string>
+    <string name="search_apps_hint">Buscar apps</string>
+    <string name="search_apps_empty">Ninguna app coincide.</string>
     <string name="habits_section">Hábitos</string>
     <string name="habits_empty">Sin hábitos todavía.</string>
     <string name="habit_add_label">Nuevo hábito</string>

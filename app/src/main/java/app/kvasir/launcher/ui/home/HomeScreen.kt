@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -28,15 +29,18 @@ import app.kvasir.launcher.domain.model.InstalledApp
 import app.kvasir.launcher.ui.gesture.onVerticalSwipe
 
 /**
- * Spec 003 + 004 + Spec 005 / RF-005-02, RF-005-03, RF-005-06, RF-005-07 —
- * Home: clock (isolated), favorites, habits with Checkbox; swipe-up opens overlay.
+ * Spec 003 + 004 + 005 + Spec 008 / RF-008-01, RF-008-06 —
+ * Home: clock (isolated), search favorites, habits; swipe-up opens overlay.
  * No DataStore / PackageManager / LauncherApps calls here.
  */
 @Composable
 fun HomeScreen(
     showDefaultHomeCta: Boolean,
     onChooseHomeClick: () -> Unit,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
     favorites: List<InstalledApp>,
+    hasAnyFavorites: Boolean,
     favoritesReady: Boolean,
     onFavoriteClick: (InstalledApp) -> Unit,
     habitRows: List<HomeHabitRow>,
@@ -67,7 +71,18 @@ fun HomeScreen(
             }
 
             HomeClock()
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = onSearchQueryChange,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                singleLine = true,
+                label = { Text(text = stringResource(R.string.search_apps_hint)) },
+            )
+            Spacer(modifier = Modifier.height(24.dp))
 
             if (showDefaultHomeCta) {
                 Text(
@@ -92,29 +107,42 @@ fun HomeScreen(
                     .fillMaxWidth(),
             ) {
                 if (favoritesReady) {
-                    if (favorites.isEmpty()) {
-                        item(key = "favorites_empty") {
-                            Text(
-                                text = stringResource(R.string.home_empty_favorites),
-                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                    when {
+                        !hasAnyFavorites -> {
+                            item(key = "favorites_empty") {
+                                Text(
+                                    text = stringResource(R.string.home_empty_favorites),
+                                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
-                    } else {
-                        items(
-                            items = favorites,
-                            key = { it.componentKey },
-                        ) { app ->
-                            Text(
-                                text = app.label,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onFavoriteClick(app) }
-                                    .padding(horizontal = 24.dp, vertical = 12.dp),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
+                        favorites.isEmpty() -> {
+                            item(key = "search_empty") {
+                                Text(
+                                    text = stringResource(R.string.search_apps_empty),
+                                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        else -> {
+                            items(
+                                items = favorites,
+                                key = { it.componentKey },
+                            ) { app ->
+                                Text(
+                                    text = app.label,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { onFavoriteClick(app) }
+                                        .padding(horizontal = 24.dp, vertical = 12.dp),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
                         }
                     }
                 }
