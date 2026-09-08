@@ -1,0 +1,15 @@
+---
+description: Flujo SDD de Kvasir — spec manda, una tarea, merge solo con OK explícito.
+alwaysApply: true
+---
+
+# SDD workflow
+
+- No cambies RF, DataStore, Manifest, permisos ni intents sin spec aprobada en `specs/NNN-slug/`.
+- Toda spec que toque el proceso Home declara impacto RAM / recomposición / arranque (`docs/domain.md`). Si degrada el presupuesto, no entra.
+- Extra en cada spec: persistencia (esquema+migración o N/A), contrato Android (o N/A), deps (default = no añadir).
+- `@Composable` no llama a `LauncherApps` ni `PackageManager`. No `setDefaultNightMode`. No `Bitmap` de iconos en v1.
+- Implementa **una** tarea de `tasks.md`, valida, para. Cita NNN y RF.
+- Código en inglés; specs y copy de UI en español.
+- Rama `spec/NNN-slug`. Un PR por spec. No push/merge a `main` sin OK explícito del usuario.
+- Plantillas: `specs/_templates/`. Skill: `.cursor/skills/sdd/SKILL.md`. Constitución: `docs/constitution.md`.
