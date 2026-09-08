@@ -8,7 +8,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.kvasir.launcher.domain.model.ThemeMode
 import app.kvasir.launcher.ui.KvasirRoot
 import app.kvasir.launcher.ui.home.HomeViewModel
 import app.kvasir.launcher.ui.overlay.OverlayViewModel
@@ -16,8 +19,8 @@ import app.kvasir.launcher.ui.settings.SettingsViewModel
 import app.kvasir.launcher.ui.theme.KvasirTheme
 
 /**
- * Spec 001 + Spec 003 + Spec 004 / RF-004-07 —
- * HOME Activity hosts [KvasirRoot]; Composables do not call DataStore / LauncherApps.
+ * Spec 001–006 — HOME Activity hosts [KvasirRoot]; theme via Compose only (RF-006-04).
+ * Composables do not call DataStore / LauncherApps.
  */
 class MainActivity : ComponentActivity() {
 
@@ -49,7 +52,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         // RF-001-05 — on Home, consume Back; stay on Home (do not finish).
-        // Settings Back is handled by BackHandler inside KvasirRoot (RF-003-05).
         onBackPressedDispatcher.addCallback(
             this,
             object : OnBackPressedCallback(enabled = true) {
@@ -60,7 +62,9 @@ class MainActivity : ComponentActivity() {
         )
 
         setContent {
-            KvasirTheme {
+            val themeMode by settingsViewModel.themeMode.collectAsStateWithLifecycle()
+            // RF-006-02, RF-006-04 — recompose MaterialTheme; never setDefaultNightMode.
+            KvasirTheme(darkTheme = themeMode == ThemeMode.Dark) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     KvasirRoot(
                         homeViewModel = homeViewModel,
@@ -74,13 +78,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        // RF-001-09 — re-read default-Home role when returning to foreground.
         homeViewModel.onResume()
     }
 
     override fun onNewIntent(intent: Intent) {
-        // RF-001-04 — warm return to Home; do not recreate setContent.
-        // RF-004-02 — leave overlay closed.
         super.onNewIntent(intent)
         setIntent(intent)
         overlayViewModel.close()

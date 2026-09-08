@@ -15,6 +15,7 @@ import app.kvasir.launcher.ui.overlay.AppsOverlay
 import app.kvasir.launcher.ui.overlay.OverlayViewModel
 import app.kvasir.launcher.ui.settings.SettingsScreen
 import app.kvasir.launcher.ui.settings.SettingsViewModel
+import app.kvasir.launcher.domain.model.ThemeMode
 
 /**
  * Spec 003 + Spec 004 / RF-004-01, RF-004-02, RF-004-08 —
@@ -68,6 +69,8 @@ fun KvasirRoot(
                     onAddHabit = settingsViewModel::addHabit,
                     onRemoveHabit = settingsViewModel::removeHabit,
                     onRenameHabit = settingsViewModel::renameHabit,
+                    darkTheme = uiState.themeMode == ThemeMode.Dark,
+                    onDarkThemeChange = settingsViewModel::setDarkTheme,
                     onBack = { destination = RootDestination.Home },
                 )
             }
