@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import app.kvasir.launcher.data.apps.AppDetailsNavigator
+import app.kvasir.launcher.data.apps.AppShortcutsRepository
 import app.kvasir.launcher.data.apps.LauncherAppsRepository
 import app.kvasir.launcher.data.calendar.CalendarEventNavigator
 import app.kvasir.launcher.data.calendar.CalendarEventsRepository
@@ -19,11 +20,13 @@ import app.kvasir.launcher.data.system.SystemPanels
 import app.kvasir.launcher.domain.AppLabelFilter
 import app.kvasir.launcher.domain.FavoritesResolver
 import app.kvasir.launcher.domain.HabitStreak
+import app.kvasir.launcher.domain.model.AppShortcut
 import app.kvasir.launcher.domain.model.Habit
 import app.kvasir.launcher.domain.model.HomeListMode
 import app.kvasir.launcher.domain.model.InstalledApp
 import app.kvasir.launcher.domain.model.NextCalendarEvent
 import app.kvasir.launcher.domain.model.PomodoroSession
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -39,10 +42,16 @@ import java.time.LocalDate
 /**
  * Spec 003 favorites + Spec 005 habits + Spec 008 + Spec 012 + Spec 013 +
  * Spec 014 / RF-014-04 + Spec 015 / RF-015-03, RF-015-06, RF-015-07 +
- * Spec 017 / RF-017-04, RF-017-05, RF-017-06 —
+ * Spec 017 / RF-017-04, RF-017-05, RF-017-06 + Spec 018 / RF-018-02…05 —
  * Home UI state; Composables never call DataStore / LauncherApps / CalendarContract /
- * AlarmManager / NotificationListener.
+ * AlarmManager / NotificationListener / ShortcutManager.
  */
+
+data class ShortcutsSheetState(
+    val app: InstalledApp,
+    val shortcuts: List<AppShortcut>,
+)
+
 data class HomeHabitRow(
     val habit: Habit,
     val completed: Boolean,
@@ -78,6 +87,7 @@ class HomeViewModel(
     private val calendarEventsRepository: CalendarEventsRepository,
     private val pomodoroController: PomodoroController,
     notificationBadgeRepository: NotificationBadgeRepository,
+    private val appShortcutsRepository: AppShortcutsRepository,
 ) : AndroidViewModel(application) {
 
     private val defaultHomeCta = MutableStateFlow(false)
@@ -108,6 +118,10 @@ class HomeViewModel(
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = emptySet(),
         )
+
+    /** Spec 018 — non-null while shortcuts sheet is open. */
+    private val shortcutsSheetInternal = MutableStateFlow<ShortcutsSheetState?>(null)
+    val shortcutsSheet: StateFlow<ShortcutsSheetState?> = shortcutsSheetInternal.asStateFlow()
 
     /**
      * Spec 015 / RF-015-06 — Activity collects and requests POST_NOTIFICATIONS, then calls
@@ -269,6 +283,36 @@ class HomeViewModel(
         AppDetailsNavigator.open(getApplication(), app.packageName)
     }
 
+    /**
+     * Spec 018 / RF-018-01…04 + Spec 009 —
+     * Long-press: load shortcuts; empty → details; else open sheet.
+     */
+    fun onAppLongClick(app: InstalledApp) {
+        viewModelScope.launch(Dispatchers.Default) {
+            val shortcuts = appShortcutsRepository.shortcutsFor(app.packageName)
+            if (shortcuts.isEmpty()) {
+                openAppDetails(app)
+            } else {
+                shortcutsSheetInternal.value = ShortcutsSheetState(app = app, shortcuts = shortcuts)
+            }
+        }
+    }
+
+    fun dismissShortcutsSheet() {
+        shortcutsSheetInternal.value = null
+    }
+
+    fun onShortcutClick(shortcut: AppShortcut) {
+        shortcutsSheetInternal.value = null
+        appShortcutsRepository.startShortcut(shortcut)
+    }
+
+    fun onShortcutsSheetDetailsClick() {
+        val app = shortcutsSheetInternal.value?.app ?: return
+        shortcutsSheetInternal.value = null
+        openAppDetails(app)
+    }
+
     /** Spec 012 / RF-012-07 — open event / calendar app; no ContentResolver in UI. */
     fun openNextEvent() {
         val event = nextEventInternal.value ?: return
@@ -319,6 +363,7 @@ class HomeViewModel(
             calendarEventsRepository: CalendarEventsRepository,
             pomodoroController: PomodoroController,
             notificationBadgeRepository: NotificationBadgeRepository,
+            appShortcutsRepository: AppShortcutsRepository,
         ): ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
@@ -332,6 +377,7 @@ class HomeViewModel(
                         calendarEventsRepository = calendarEventsRepository,
                         pomodoroController = pomodoroController,
                         notificationBadgeRepository = notificationBadgeRepository,
+                        appShortcutsRepository = appShortcutsRepository,
                     )
                 }
             }

@@ -21,6 +21,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -34,10 +35,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import app.kvasir.launcher.R
 import app.kvasir.launcher.domain.NextEventLineFormat
 import app.kvasir.launcher.domain.PomodoroPhaseMachine
 import app.kvasir.launcher.domain.PomodoroRemainingFormat
+import app.kvasir.launcher.domain.model.AppShortcut
 import app.kvasir.launcher.domain.model.HomeListMode
 import app.kvasir.launcher.domain.model.InstalledApp
 import app.kvasir.launcher.domain.model.NextCalendarEvent
@@ -50,7 +53,7 @@ import kotlinx.coroutines.delay
 
 /**
  * Spec 003–012 + Spec 013 / RF-013-01…04 + Spec 015 / RF-015-03, RF-015-07 +
- * Spec 017 / RF-017-04…06 —
+ * Spec 017 / RF-017-04…06 + Spec 018 / RF-018-02…05 —
  * Unified Home: ★ chrome or letter/search catalog + scrubber rail + Pomodoro + badges.
  * No DataStore / PackageManager / LauncherApps / CalendarContract / AlarmManager /
  * NotificationListener here.
@@ -88,6 +91,11 @@ fun HomeScreen(
     onPomodoroStop: () -> Unit = {},
     /** Spec 017 — packages with badge; only applied to ★ favorites rows. */
     badgedPackages: Set<String> = emptySet(),
+    /** Spec 018 — non-null while shortcuts sheet is open. */
+    shortcutsSheet: ShortcutsSheetState? = null,
+    onDismissShortcutsSheet: () -> Unit = {},
+    onShortcutClick: (AppShortcut) -> Unit = {},
+    onShortcutsSheetDetailsClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -158,6 +166,63 @@ fun HomeScreen(
                 onSelectLetter = onSelectLetter,
                 modifier = Modifier.fillMaxHeight(),
             )
+        }
+
+        // Spec 018 / RF-018-02, RF-018-03, RF-018-05 — text-only shortcuts sheet.
+        if (shortcutsSheet != null) {
+            ShortcutsSheetDialog(
+                state = shortcutsSheet,
+                onDismiss = onDismissShortcutsSheet,
+                onShortcutClick = onShortcutClick,
+                onDetailsClick = onShortcutsSheetDetailsClick,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ShortcutsSheetDialog(
+    state: ShortcutsSheetState,
+    onDismiss: () -> Unit,
+    onShortcutClick: (AppShortcut) -> Unit,
+    onDetailsClick: () -> Unit,
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = MaterialTheme.shapes.extraLarge,
+            tonalElevation = 6.dp,
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp),
+            ) {
+                Text(
+                    text = state.app.label,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                )
+                state.shortcuts.forEach { shortcut ->
+                    Text(
+                        text = shortcut.label,
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onShortcutClick(shortcut) }
+                            .padding(horizontal = 24.dp, vertical = 14.dp),
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.shortcuts_app_details),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onDetailsClick)
+                        .padding(horizontal = 24.dp, vertical = 14.dp),
+                )
+            }
         }
     }
 }

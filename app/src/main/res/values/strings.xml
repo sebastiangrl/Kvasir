@@ -39,6 +39,8 @@
     <string name="pomodoro_sessions">Sesiones por ciclo</string>
     <!-- Spec 017 — badge marker next to favorite label. -->
     <string name="home_app_badge_label">%1$s •</string>
+    <!-- Spec 018 — shortcuts sheet. -->
+    <string name="shortcuts_app_details">Detalles de la app</string>
     <!-- Spec 016 — Settings hub sections. -->
     <string name="settings_section_appearance">Apariencia</string>
     <string name="settings_section_appearance_sub">Tema claro u oscuro</string>

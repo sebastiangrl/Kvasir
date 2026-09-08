@@ -17,7 +17,8 @@ import app.kvasir.launcher.ui.settings.SettingsScreen
 import app.kvasir.launcher.ui.settings.SettingsViewModel
 
 /**
- * Spec 003 + Spec 008 + Spec 009 + Spec 012 + Spec 013 + Spec 015 + Spec 016 —
+ * Spec 003 + Spec 008 + Spec 009 + Spec 012 + Spec 013 + Spec 015 + Spec 016 +
+ * Spec 018 —
  * Home (Niagara scrubber) | Settings hub. Overlay A–Z removed (RF-013-05).
  */
 @Composable
@@ -42,10 +43,15 @@ fun KvasirRoot(
                 val nextEvent by homeViewModel.nextEvent.collectAsStateWithLifecycle()
                 val pomodoroSession by homeViewModel.pomodoroSession.collectAsStateWithLifecycle()
                 val badgedPackages by homeViewModel.badgedPackages.collectAsStateWithLifecycle()
+                val shortcutsSheet by homeViewModel.shortcutsSheet.collectAsStateWithLifecycle()
                 val leaveFavoritesChrome =
                     uiState.isQueryActive || uiState.listMode !is HomeListMode.Favorites
+                // Spec 018 — dismiss shortcuts sheet before scrubber Back.
+                BackHandler(enabled = shortcutsSheet != null) {
+                    homeViewModel.dismissShortcutsSheet()
+                }
                 // Spec 013 / RF-013-07 — Back from letter/query → ★ (do not finish Activity).
-                BackHandler(enabled = leaveFavoritesChrome) {
+                BackHandler(enabled = shortcutsSheet == null && leaveFavoritesChrome) {
                     homeViewModel.resetToFavorites()
                 }
                 HomeScreen(
@@ -61,9 +67,9 @@ fun KvasirRoot(
                     isQueryActive = uiState.isQueryActive,
                     listMode = uiState.listMode,
                     onFavoriteClick = homeViewModel::launchApp,
-                    onFavoriteLongClick = homeViewModel::openAppDetails,
+                    onFavoriteLongClick = homeViewModel::onAppLongClick,
                     onCatalogAppClick = homeViewModel::launchApp,
-                    onCatalogAppLongClick = homeViewModel::openAppDetails,
+                    onCatalogAppLongClick = homeViewModel::onAppLongClick,
                     habitRows = uiState.habitRows,
                     onHabitCheckedChange = homeViewModel::setHabitCompleted,
                     onSettingsClick = {
@@ -81,6 +87,10 @@ fun KvasirRoot(
                     onPomodoroResume = homeViewModel::resumePomodoro,
                     onPomodoroStop = homeViewModel::stopPomodoro,
                     badgedPackages = badgedPackages,
+                    shortcutsSheet = shortcutsSheet,
+                    onDismissShortcutsSheet = homeViewModel::dismissShortcutsSheet,
+                    onShortcutClick = homeViewModel::onShortcutClick,
+                    onShortcutsSheetDetailsClick = homeViewModel::onShortcutsSheetDetailsClick,
                 )
             }
             RootDestination.Settings -> {
