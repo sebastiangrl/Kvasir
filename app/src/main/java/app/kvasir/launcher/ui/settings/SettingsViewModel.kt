@@ -10,6 +10,7 @@ import app.kvasir.launcher.data.prefs.PreferencesRepository
 import app.kvasir.launcher.domain.HabitStreak
 import app.kvasir.launcher.domain.model.Habit
 import app.kvasir.launcher.domain.model.InstalledApp
+import app.kvasir.launcher.domain.model.PomodoroConfig
 import app.kvasir.launcher.domain.model.ThemeMode
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -20,8 +21,8 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 /**
- * Spec 003 + Spec 005 + Spec 006 + Spec 014 / RF-014-05 —
- * Settings catalog, habits (+ streak / 7-day), theme; Composables never touch DataStore / LauncherApps.
+ * Spec 003 + Spec 005 + Spec 006 + Spec 014 / RF-014-05 + Spec 015 / RF-015-04 —
+ * Settings catalog, habits, theme, Pomodoro config; Composables never touch DataStore / LauncherApps.
  */
 data class SettingsFavoriteRow(
     val app: InstalledApp,
@@ -40,6 +41,7 @@ data class SettingsUiState(
     val appsLoaded: Boolean = false,
     val habitRows: List<SettingsHabitRow> = emptyList(),
     val themeMode: ThemeMode = ThemeMode.Light,
+    val pomodoroConfig: PomodoroConfig = PomodoroConfig.Default,
 )
 
 class SettingsViewModel(
@@ -96,12 +98,14 @@ class SettingsViewModel(
             )
         },
         preferencesRepository.themeMode,
-    ) { catalog, theme ->
+        preferencesRepository.pomodoroConfig,
+    ) { catalog, theme, pomodoro ->
         SettingsUiState(
             rows = catalog.rows,
             appsLoaded = catalog.appsLoaded,
             habitRows = catalog.habitRows,
             themeMode = theme,
+            pomodoroConfig = pomodoro,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -156,6 +160,28 @@ class SettingsViewModel(
             preferencesRepository.setThemeMode(
                 if (dark) ThemeMode.Dark else ThemeMode.Light,
             )
+        }
+    }
+
+    /** Spec 015 / RF-015-04 — clamp and persist Pomodoro config fields. */
+    fun setPomodoroWorkMinutes(minutes: Int) {
+        viewModelScope.launch {
+            val current = preferencesRepository.getPomodoroConfig()
+            preferencesRepository.setPomodoroConfig(current.copy(workMinutes = minutes))
+        }
+    }
+
+    fun setPomodoroBreakMinutes(minutes: Int) {
+        viewModelScope.launch {
+            val current = preferencesRepository.getPomodoroConfig()
+            preferencesRepository.setPomodoroConfig(current.copy(breakMinutes = minutes))
+        }
+    }
+
+    fun setPomodoroSessions(sessions: Int) {
+        viewModelScope.launch {
+            val current = preferencesRepository.getPomodoroConfig()
+            preferencesRepository.setPomodoroConfig(current.copy(sessionsPerCycle = sessions))
         }
     }
 

@@ -32,20 +32,23 @@ Siguiente número libre en tres dígitos (`001`, `002`, …). No reutilizar núm
 | `012` | Próximo evento de calendario |
 | `013` | Home + scrubber unificado (Niagara ★ / A–Z) |
 | `014` | Rachas / historial de hábitos |
+| `015` | Pomodoro (sesiones + notificación al terminar) |
 
 ## Backlog sugerido (aún no escrito)
 
 | Spec | Tema |
 | --- | --- |
-| `015` | Widgets |
-| `016` | Badges |
-| `017` | Work profile |
-| `018` | Atajos |
-| `019` | Per-app theming |
+| `016` | Ajustes organizados (secciones in-app; hub de permisos) |
+| `017` | Badges |
+| `018` | Work profile |
+| `019` | Atajos |
+| `020` | Per-app theming |
 
-**Descartado del backlog:** carpetas-grupo de apps (tipo carpeta “Social”). Sustituido por scrubber unificado (013).
+**Descartado del backlog:**
+- Carpetas-grupo de apps (tipo carpeta “Social”) → sustituido por scrubber unificado (013).
+- Host de widgets de terceros en Home → sustituido por Pomodoro propio (015).
 
-No escribir estas specs hasta que el usuario pida «especifica X» en PLAN. Siguiente número libre: **015**.
+No escribir estas specs hasta que el usuario pida «especifica X» en PLAN. Siguiente número libre: **016**.
 
 ## Contrato
 

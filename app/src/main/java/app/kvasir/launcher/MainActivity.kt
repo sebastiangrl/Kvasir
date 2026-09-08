@@ -3,6 +3,7 @@ package app.kvasir.launcher
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
@@ -12,6 +13,7 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
@@ -24,9 +26,9 @@ import app.kvasir.launcher.ui.settings.SettingsViewModel
 import app.kvasir.launcher.ui.theme.KvasirTheme
 
 /**
- * Spec 001–006 + Spec 010 + Spec 012 + Spec 013 / RF-013-05, RF-013-07 —
+ * Spec 001–006 + Spec 010 + Spec 012 + Spec 013 + Spec 015 / RF-015-06 —
  * HOME Activity hosts [KvasirRoot]; theme via Compose only.
- * Composables do not call DataStore / LauncherApps / CalendarContract.
+ * Composables do not call DataStore / LauncherApps / CalendarContract / AlarmManager.
  */
 class MainActivity : ComponentActivity() {
 
@@ -37,6 +39,7 @@ class MainActivity : ComponentActivity() {
             launcherAppsRepository = app.container.launcherAppsRepository,
             preferencesRepository = app.container.preferencesRepository,
             calendarEventsRepository = app.container.calendarEventsRepository,
+            pomodoroController = app.container.pomodoroController,
         )
     }
 
@@ -57,6 +60,13 @@ class MainActivity : ComponentActivity() {
         homeViewModel.refreshNextEvent()
     }
 
+    /** Spec 015 / RF-015-06 — on first Iniciar; settle start whether granted or denied. */
+    private val requestNotificationsPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) {
+        homeViewModel.onNotificationPermissionSettled()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -73,6 +83,13 @@ class MainActivity : ComponentActivity() {
         setContent {
             val app = application as KvasirApp
             val themeMode by settingsViewModel.themeMode.collectAsStateWithLifecycle()
+
+            LaunchedEffect(homeViewModel) {
+                homeViewModel.notificationPermissionRequests.collect {
+                    maybeRequestNotificationsThenStart()
+                }
+            }
+
             CompositionLocalProvider(
                 LocalAppIconLoader provides app.container.appIconLoader,
             ) {
@@ -111,5 +128,22 @@ class MainActivity : ComponentActivity() {
         if (calendarPermissionRequestedThisProcess) return
         calendarPermissionRequestedThisProcess = true
         requestCalendarPermission.launch(Manifest.permission.READ_CALENDAR)
+    }
+
+    /** Spec 015 / RF-015-06 — request only when needed; always start afterward. */
+    private fun maybeRequestNotificationsThenStart() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            homeViewModel.onNotificationPermissionSettled()
+            return
+        }
+        val granted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.POST_NOTIFICATIONS,
+        ) == PackageManager.PERMISSION_GRANTED
+        if (granted) {
+            homeViewModel.onNotificationPermissionSettled()
+        } else {
+            requestNotificationsPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 }

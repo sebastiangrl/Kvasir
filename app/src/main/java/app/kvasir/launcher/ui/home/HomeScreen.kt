@@ -24,6 +24,11 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -31,16 +36,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.kvasir.launcher.R
 import app.kvasir.launcher.domain.NextEventLineFormat
+import app.kvasir.launcher.domain.PomodoroPhaseMachine
+import app.kvasir.launcher.domain.PomodoroRemainingFormat
 import app.kvasir.launcher.domain.model.HomeListMode
 import app.kvasir.launcher.domain.model.InstalledApp
 import app.kvasir.launcher.domain.model.NextCalendarEvent
+import app.kvasir.launcher.domain.model.PomodoroPhase
+import app.kvasir.launcher.domain.model.PomodoroSession
+import app.kvasir.launcher.domain.model.PomodoroStatus
 import app.kvasir.launcher.ui.gesture.onVerticalSwipe
 import app.kvasir.launcher.ui.icons.MonochromeAppIcon
+import kotlinx.coroutines.delay
 
 /**
- * Spec 003–012 + Spec 013 / RF-013-01…04 —
- * Unified Home: ★ chrome or letter/search catalog + scrubber rail.
- * No DataStore / PackageManager / LauncherApps / CalendarContract here.
+ * Spec 003–012 + Spec 013 / RF-013-01…04 + Spec 015 / RF-015-03, RF-015-07 —
+ * Unified Home: ★ chrome or letter/search catalog + scrubber rail + Pomodoro block.
+ * No DataStore / PackageManager / LauncherApps / CalendarContract / AlarmManager here.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -68,6 +79,11 @@ fun HomeScreen(
     onSelectLetter: (Char) -> Unit,
     nextEvent: NextCalendarEvent? = null,
     onNextEventClick: () -> Unit = {},
+    pomodoroSession: PomodoroSession = PomodoroSession.Idle,
+    onPomodoroStart: () -> Unit = {},
+    onPomodoroPause: () -> Unit = {},
+    onPomodoroResume: () -> Unit = {},
+    onPomodoroStop: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -111,6 +127,11 @@ fun HomeScreen(
                         onHabitCheckedChange = onHabitCheckedChange,
                         nextEvent = nextEvent,
                         onNextEventClick = onNextEventClick,
+                        pomodoroSession = pomodoroSession,
+                        onPomodoroStart = onPomodoroStart,
+                        onPomodoroPause = onPomodoroPause,
+                        onPomodoroResume = onPomodoroResume,
+                        onPomodoroStop = onPomodoroStop,
                     )
                 } else {
                     CatalogHomeBody(
@@ -152,6 +173,11 @@ private fun FavoritesHomeBody(
     onHabitCheckedChange: (habitId: String, completed: Boolean) -> Unit,
     nextEvent: NextCalendarEvent?,
     onNextEventClick: () -> Unit,
+    pomodoroSession: PomodoroSession,
+    onPomodoroStart: () -> Unit,
+    onPomodoroPause: () -> Unit,
+    onPomodoroResume: () -> Unit,
+    onPomodoroStop: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         HomeClock()
@@ -239,6 +265,16 @@ private fun FavoritesHomeBody(
                         }
                     }
                 }
+            }
+
+            item(key = "pomodoro") {
+                PomodoroHomeBlock(
+                    session = pomodoroSession,
+                    onStart = onPomodoroStart,
+                    onPause = onPomodoroPause,
+                    onResume = onPomodoroResume,
+                    onStop = onPomodoroStop,
+                )
             }
 
             item(key = "habits_header") {
@@ -397,5 +433,82 @@ private fun AppRow(
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurface,
         )
+    }
+}
+
+/**
+ * Spec 015 / RF-015-03, RF-015-07 —
+ * Local 1 Hz tick only for this block; does not drive [HomeClock].
+ */
+@Composable
+private fun PomodoroHomeBlock(
+    session: PomodoroSession,
+    onStart: () -> Unit,
+    onPause: () -> Unit,
+    onResume: () -> Unit,
+    onStop: () -> Unit,
+) {
+    var nowEpochMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(session.status, session.endsAtEpochMillis, session.remainingMillis) {
+        if (session.status == PomodoroStatus.Running) {
+            while (true) {
+                nowEpochMillis = System.currentTimeMillis()
+                delay(1_000L)
+            }
+        } else {
+            nowEpochMillis = System.currentTimeMillis()
+        }
+    }
+    val remaining = PomodoroPhaseMachine.remainingMillis(session, nowEpochMillis)
+    val remainingLabel = PomodoroRemainingFormat.format(remaining)
+    val statusText = when (session.status) {
+        PomodoroStatus.Idle -> stringResource(R.string.pomodoro_status_idle)
+        PomodoroStatus.Paused -> stringResource(R.string.pomodoro_status_paused, remainingLabel)
+        PomodoroStatus.Running -> when (session.phase) {
+            PomodoroPhase.Work -> stringResource(R.string.pomodoro_status_work, remainingLabel)
+            PomodoroPhase.Break -> stringResource(R.string.pomodoro_status_break, remainingLabel)
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 8.dp),
+    ) {
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = statusText,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            when (session.status) {
+                PomodoroStatus.Idle -> {
+                    TextButton(onClick = onStart) {
+                        Text(text = stringResource(R.string.pomodoro_start))
+                    }
+                }
+                PomodoroStatus.Running -> {
+                    TextButton(onClick = onPause) {
+                        Text(text = stringResource(R.string.pomodoro_pause))
+                    }
+                    TextButton(onClick = onStop) {
+                        Text(text = stringResource(R.string.pomodoro_stop))
+                    }
+                }
+                PomodoroStatus.Paused -> {
+                    TextButton(onClick = onResume) {
+                        Text(text = stringResource(R.string.pomodoro_resume))
+                    }
+                    TextButton(onClick = onStop) {
+                        Text(text = stringResource(R.string.pomodoro_stop))
+                    }
+                }
+            }
+        }
     }
 }

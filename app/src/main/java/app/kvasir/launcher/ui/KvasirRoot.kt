@@ -17,7 +17,7 @@ import app.kvasir.launcher.ui.settings.SettingsScreen
 import app.kvasir.launcher.ui.settings.SettingsViewModel
 
 /**
- * Spec 003 + Spec 008 + Spec 009 + Spec 012 + Spec 013 —
+ * Spec 003 + Spec 008 + Spec 009 + Spec 012 + Spec 013 + Spec 015 —
  * Home (Niagara scrubber) | Settings. Overlay A–Z removed (RF-013-05).
  */
 @Composable
@@ -38,6 +38,7 @@ fun KvasirRoot(
             RootDestination.Home -> {
                 val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
                 val nextEvent by homeViewModel.nextEvent.collectAsStateWithLifecycle()
+                val pomodoroSession by homeViewModel.pomodoroSession.collectAsStateWithLifecycle()
                 val leaveFavoritesChrome =
                     uiState.isQueryActive || uiState.listMode !is HomeListMode.Favorites
                 // Spec 013 / RF-013-07 — Back from letter/query → ★ (do not finish Activity).
@@ -71,6 +72,11 @@ fun KvasirRoot(
                     onSelectLetter = homeViewModel::selectLetter,
                     nextEvent = nextEvent,
                     onNextEventClick = homeViewModel::openNextEvent,
+                    pomodoroSession = pomodoroSession,
+                    onPomodoroStart = homeViewModel::startPomodoro,
+                    onPomodoroPause = homeViewModel::pausePomodoro,
+                    onPomodoroResume = homeViewModel::resumePomodoro,
+                    onPomodoroStop = homeViewModel::stopPomodoro,
                 )
             }
             RootDestination.Settings -> {
@@ -85,6 +91,10 @@ fun KvasirRoot(
                     onRenameHabit = settingsViewModel::renameHabit,
                     darkTheme = uiState.themeMode == ThemeMode.Dark,
                     onDarkThemeChange = settingsViewModel::setDarkTheme,
+                    pomodoroConfig = uiState.pomodoroConfig,
+                    onPomodoroWorkMinutes = settingsViewModel::setPomodoroWorkMinutes,
+                    onPomodoroBreakMinutes = settingsViewModel::setPomodoroBreakMinutes,
+                    onPomodoroSessions = settingsViewModel::setPomodoroSessions,
                     onBack = { destination = RootDestination.Home },
                 )
             }

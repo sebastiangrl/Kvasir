@@ -8,6 +8,15 @@
     <!-- Spec 012 / RF-012-01, RF-012-08 — read next event only (no WRITE_CALENDAR). -->
     <uses-permission android:name="android.permission.READ_CALENDAR" />
 
+    <!-- Spec 015 / RF-015-06 — phase/cycle notifications (runtime on API 33+). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Spec 015 / RF-015-05 — exact end-of-phase alarms (timer role). -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+
+    <!-- Spec 015 / RF-015-02 — reschedule running session after reboot. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
@@ -44,6 +53,16 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+
+        <!-- Spec 015 — alarm + stop via explicit PendingIntent; boot via filter. -->
+        <receiver
+            android:name=".data.pomodoro.PomodoroAlarmReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>
