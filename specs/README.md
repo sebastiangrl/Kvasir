@@ -39,16 +39,15 @@ Siguiente número libre en tres dígitos (`001`, `002`, …). No reutilizar núm
 
 ## Backlog sugerido (aún no escrito)
 
-| Spec | Tema |
-| --- | --- |
-| `019` | Per-app theming |
+_(vacío)_
 
 **Descartado del backlog:**
 - Carpetas-grupo de apps (tipo carpeta “Social”) → sustituido por scrubber unificado (013).
 - Host de widgets de terceros en Home → sustituido por Pomodoro propio (015).
 - Work profile → no necesario para uso personal hiperfocus.
+- Per-app theming → no encaja con hiperfocus / minimalismo; se deja el tema global (006).
 
-No escribir estas specs hasta que el usuario pida «especifica X» en PLAN. Siguiente número libre: **019**.
+No escribir specs nuevas hasta que el usuario pida «especifica X» en PLAN. Siguiente número libre: **019**.
 
 ## Contrato
 
