@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Spec 001 / RF-001-03, RF-001-04, RF-001-05 — HOME contract (reversible; no device admin). -->
+<!-- Spec 001 HOME + Spec 002 / RF-002-03 package visibility (no QUERY_ALL_PACKAGES). -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
 
     <application
         android:name=".KvasirApp"

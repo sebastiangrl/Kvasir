@@ -16,15 +16,17 @@ import app.kvasir.launcher.ui.home.HomeViewModel
 import app.kvasir.launcher.ui.theme.KvasirTheme
 
 /**
- * Spec 001 / RF-001-03, RF-001-04, RF-001-05, RF-001-09, RF-001-10 —
- * HOME Activity: singleTask warm path via onNewIntent; Back must not finish.
+ * Spec 001 + Spec 002 — HOME Activity.
  * Composables do not call PackageManager / LauncherApps.
  */
 class MainActivity : ComponentActivity() {
 
     private val homeViewModel: HomeViewModel by viewModels {
         val app = application as KvasirApp
-        HomeViewModel.factory(app.container.defaultHomeRepository)
+        HomeViewModel.factory(
+            defaultHomeRepository = app.container.defaultHomeRepository,
+            launcherAppsRepository = app.container.launcherAppsRepository,
+        )
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,6 +49,9 @@ class MainActivity : ComponentActivity() {
                     HomeScreen(
                         showDefaultHomeCta = uiState.showDefaultHomeCta,
                         onChooseHomeClick = homeViewModel::openHomePicker,
+                        installedApps = uiState.installedApps,
+                        appsLoaded = uiState.appsLoaded,
+                        onAppClick = homeViewModel::launchApp,
                     )
                 }
             }
