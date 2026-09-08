@@ -1,5 +1,6 @@
 package app.kvasir.launcher.ui.settings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,14 +33,18 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import app.kvasir.launcher.R
+import app.kvasir.launcher.data.settings.PermissionsStatus
 import app.kvasir.launcher.domain.model.PomodoroConfig
+import app.kvasir.launcher.domain.model.SettingsSection
 
 /**
- * Spec 003 + Spec 005 + Spec 006 + Spec 014 / RF-014-05 + Spec 015 / RF-015-04 —
- * Favorites, habits, theme, Pomodoro config; no DataStore / LauncherApps here.
+ * Spec 003 + Spec 005 + Spec 006 + Spec 014 + Spec 015 + Spec 016 / RF-016-01…05 —
+ * Settings hub + sections; no DataStore / LauncherApps / PackageManager here.
  */
 @Composable
 fun SettingsScreen(
+    section: SettingsSection?,
+    onOpenSection: (SettingsSection) -> Unit,
     rows: List<SettingsFavoriteRow>,
     appsLoaded: Boolean,
     onFavoriteChange: (componentKey: String, favorite: Boolean) -> Unit,
@@ -53,18 +58,30 @@ fun SettingsScreen(
     onPomodoroWorkMinutes: (Int) -> Unit,
     onPomodoroBreakMinutes: (Int) -> Unit,
     onPomodoroSessions: (Int) -> Unit,
+    permissionsStatus: PermissionsStatus,
+    onOpenHomePicker: () -> Unit,
+    onRequestCalendarPermission: () -> Unit,
+    onRequestNotificationsPermission: () -> Unit,
+    onOpenAppDetailsSettings: () -> Unit,
+    onOpenNotificationSettings: () -> Unit,
+    onOpenExactAlarmSettings: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var newHabitLabel by remember { mutableStateOf("") }
-    val focusManager = LocalFocusManager.current
-
     Column(
         modifier = modifier
             .fillMaxSize()
             .statusBarsPadding()
             .padding(top = 8.dp),
     ) {
+        val title = when (section) {
+            null -> stringResource(R.string.settings)
+            SettingsSection.Appearance -> stringResource(R.string.settings_section_appearance)
+            SettingsSection.Pomodoro -> stringResource(R.string.pomodoro_section)
+            SettingsSection.Favorites -> stringResource(R.string.settings_section_favorites)
+            SettingsSection.Habits -> stringResource(R.string.habits_section)
+            SettingsSection.Permissions -> stringResource(R.string.settings_section_permissions)
+        }
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -76,144 +93,240 @@ fun SettingsScreen(
                 Text(text = stringResource(R.string.settings_back))
             }
             Text(
-                text = stringResource(R.string.settings),
+                text = title,
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
             )
         }
 
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
-            item(key = "theme_row") {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
+        when (section) {
+            null -> SettingsHub(onOpenSection = onOpenSection)
+            SettingsSection.Appearance -> AppearanceSection(
+                darkTheme = darkTheme,
+                onDarkThemeChange = onDarkThemeChange,
+            )
+            SettingsSection.Pomodoro -> PomodoroSection(
+                pomodoroConfig = pomodoroConfig,
+                onPomodoroWorkMinutes = onPomodoroWorkMinutes,
+                onPomodoroBreakMinutes = onPomodoroBreakMinutes,
+                onPomodoroSessions = onPomodoroSessions,
+            )
+            SettingsSection.Favorites -> FavoritesSection(
+                rows = rows,
+                appsLoaded = appsLoaded,
+                onFavoriteChange = onFavoriteChange,
+            )
+            SettingsSection.Habits -> HabitsSection(
+                habitRows = habitRows,
+                onAddHabit = onAddHabit,
+                onRemoveHabit = onRemoveHabit,
+                onRenameHabit = onRenameHabit,
+            )
+            SettingsSection.Permissions -> PermissionsSection(
+                status = permissionsStatus,
+                onOpenHomePicker = onOpenHomePicker,
+                onRequestCalendarPermission = onRequestCalendarPermission,
+                onRequestNotificationsPermission = onRequestNotificationsPermission,
+                onOpenAppDetailsSettings = onOpenAppDetailsSettings,
+                onOpenNotificationSettings = onOpenNotificationSettings,
+                onOpenExactAlarmSettings = onOpenExactAlarmSettings,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsHub(
+    onOpenSection: (SettingsSection) -> Unit,
+) {
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        item(key = "hub_appearance") {
+            HubRow(
+                title = stringResource(R.string.settings_section_appearance),
+                subtitle = stringResource(R.string.settings_section_appearance_sub),
+                onClick = { onOpenSection(SettingsSection.Appearance) },
+            )
+        }
+        item(key = "hub_pomodoro") {
+            HubRow(
+                title = stringResource(R.string.pomodoro_section),
+                subtitle = stringResource(R.string.settings_section_pomodoro_sub),
+                onClick = { onOpenSection(SettingsSection.Pomodoro) },
+            )
+        }
+        item(key = "hub_favorites") {
+            HubRow(
+                title = stringResource(R.string.settings_section_favorites),
+                subtitle = stringResource(R.string.settings_section_favorites_sub),
+                onClick = { onOpenSection(SettingsSection.Favorites) },
+            )
+        }
+        item(key = "hub_habits") {
+            HubRow(
+                title = stringResource(R.string.habits_section),
+                subtitle = stringResource(R.string.settings_section_habits_sub),
+                onClick = { onOpenSection(SettingsSection.Habits) },
+            )
+        }
+        item(key = "hub_permissions") {
+            HubRow(
+                title = stringResource(R.string.settings_section_permissions),
+                subtitle = stringResource(R.string.settings_section_permissions_sub),
+                onClick = { onOpenSection(SettingsSection.Permissions) },
+            )
+        }
+        item(key = "hub_spacer") {
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun HubRow(
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 24.dp, vertical = 14.dp),
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = subtitle,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun AppearanceSection(
+    darkTheme: Boolean,
+    onDarkThemeChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            text = stringResource(R.string.theme_dark),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Switch(
+            checked = darkTheme,
+            onCheckedChange = onDarkThemeChange,
+        )
+    }
+}
+
+@Composable
+private fun PomodoroSection(
+    pomodoroConfig: PomodoroConfig,
+    onPomodoroWorkMinutes: (Int) -> Unit,
+    onPomodoroBreakMinutes: (Int) -> Unit,
+    onPomodoroSessions: (Int) -> Unit,
+) {
+    PomodoroConfigFields(
+        config = pomodoroConfig,
+        onWorkMinutes = onPomodoroWorkMinutes,
+        onBreakMinutes = onPomodoroBreakMinutes,
+        onSessions = onPomodoroSessions,
+    )
+}
+
+@Composable
+private fun FavoritesSection(
+    rows: List<SettingsFavoriteRow>,
+    appsLoaded: Boolean,
+    onFavoriteChange: (componentKey: String, favorite: Boolean) -> Unit,
+) {
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        when {
+            !appsLoaded -> Unit
+            rows.isEmpty() -> {
+                item(key = "favorites_empty") {
                     Text(
-                        text = stringResource(R.string.theme_dark),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Switch(
-                        checked = darkTheme,
-                        onCheckedChange = onDarkThemeChange,
+                        text = stringResource(R.string.apps_installed_empty),
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                Spacer(modifier = Modifier.height(8.dp))
             }
-
-            item(key = "pomodoro_header") {
-                Text(
-                    text = stringResource(R.string.pomodoro_section),
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-
-            item(key = "pomodoro_fields") {
-                PomodoroConfigFields(
-                    config = pomodoroConfig,
-                    onWorkMinutes = onPomodoroWorkMinutes,
-                    onBreakMinutes = onPomodoroBreakMinutes,
-                    onSessions = onPomodoroSessions,
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
-            item(key = "favorites_header") {
-                Text(
-                    text = stringResource(R.string.choose_favorites),
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
-
-            when {
-                !appsLoaded -> {
-                    // No fake rows while loading.
-                }
-                rows.isEmpty() -> {
-                    item(key = "favorites_empty") {
+            else -> {
+                items(
+                    items = rows,
+                    key = { it.app.componentKey },
+                ) { row ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
                         Text(
-                            text = stringResource(R.string.apps_installed_empty),
-                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            text = row.app.label,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 16.dp),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Switch(
+                            checked = row.isFavorite,
+                            onCheckedChange = { checked ->
+                                onFavoriteChange(row.app.componentKey, checked)
+                            },
                         )
                     }
                 }
-                else -> {
-                    items(
-                        items = rows,
-                        key = { it.app.componentKey },
-                    ) { row ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 24.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                        ) {
-                            Text(
-                                text = row.app.label,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .padding(end = 16.dp),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Switch(
-                                checked = row.isFavorite,
-                                onCheckedChange = { checked ->
-                                    onFavoriteChange(row.app.componentKey, checked)
-                                },
-                            )
-                        }
-                    }
-                }
             }
+        }
+        item(key = "favorites_spacer") {
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
 
-            item(key = "habits_header") {
-                Spacer(modifier = Modifier.height(24.dp))
-                Text(
-                    text = stringResource(R.string.habits_section),
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
+@Composable
+private fun HabitsSection(
+    habitRows: List<SettingsHabitRow>,
+    onAddHabit: (label: String) -> Unit,
+    onRemoveHabit: (habitId: String) -> Unit,
+    onRenameHabit: (habitId: String, label: String) -> Unit,
+) {
+    var newHabitLabel by remember { mutableStateOf("") }
+    val focusManager = LocalFocusManager.current
 
-            item(key = "habits_add") {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    OutlinedTextField(
-                        value = newHabitLabel,
-                        onValueChange = { newHabitLabel = it },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true,
-                        label = { Text(stringResource(R.string.habit_add_label)) },
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(
-                            onDone = {
-                                val trimmed = newHabitLabel.trim()
-                                if (trimmed.isNotEmpty()) {
-                                    onAddHabit(trimmed)
-                                    newHabitLabel = ""
-                                    focusManager.clearFocus()
-                                }
-                            },
-                        ),
-                    )
-                    TextButton(
-                        onClick = {
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        item(key = "habits_add") {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                OutlinedTextField(
+                    value = newHabitLabel,
+                    onValueChange = { newHabitLabel = it },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    label = { Text(stringResource(R.string.habit_add_label)) },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
                             val trimmed = newHabitLabel.trim()
                             if (trimmed.isNotEmpty()) {
                                 onAddHabit(trimmed)
@@ -221,36 +334,186 @@ fun SettingsScreen(
                                 focusManager.clearFocus()
                             }
                         },
-                    ) {
-                        Text(text = stringResource(R.string.habit_add_action))
+                    ),
+                )
+                TextButton(
+                    onClick = {
+                        val trimmed = newHabitLabel.trim()
+                        if (trimmed.isNotEmpty()) {
+                            onAddHabit(trimmed)
+                            newHabitLabel = ""
+                            focusManager.clearFocus()
+                        }
+                    },
+                ) {
+                    Text(text = stringResource(R.string.habit_add_action))
+                }
+            }
+        }
+
+        if (habitRows.isEmpty()) {
+            item(key = "habits_empty") {
+                Text(
+                    text = stringResource(R.string.habits_empty),
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        } else {
+            items(
+                items = habitRows,
+                key = { it.habit.id },
+            ) { row ->
+                HabitEditRow(
+                    row = row,
+                    onRename = onRenameHabit,
+                    onRemove = onRemoveHabit,
+                )
+            }
+        }
+
+        item(key = "habits_spacer") {
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+/** Spec 016 / RF-016-04 — permission rows + CTAs (state from ViewModel). */
+@Composable
+private fun PermissionsSection(
+    status: PermissionsStatus,
+    onOpenHomePicker: () -> Unit,
+    onRequestCalendarPermission: () -> Unit,
+    onRequestNotificationsPermission: () -> Unit,
+    onOpenAppDetailsSettings: () -> Unit,
+    onOpenNotificationSettings: () -> Unit,
+    onOpenExactAlarmSettings: () -> Unit,
+) {
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        item(key = "perm_home") {
+            PermissionRow(
+                title = stringResource(R.string.settings_perm_home),
+                statusText = if (status.isDefaultHome) {
+                    stringResource(R.string.settings_perm_home_yes)
+                } else {
+                    stringResource(R.string.settings_perm_home_no)
+                },
+                primaryActionLabel = if (!status.isDefaultHome) {
+                    stringResource(R.string.settings_perm_choose)
+                } else {
+                    null
+                },
+                onPrimaryAction = onOpenHomePicker,
+            )
+        }
+        item(key = "perm_calendar") {
+            PermissionRow(
+                title = stringResource(R.string.settings_perm_calendar),
+                statusText = if (status.calendarGranted) {
+                    stringResource(R.string.settings_perm_granted)
+                } else {
+                    stringResource(R.string.settings_perm_denied)
+                },
+                primaryActionLabel = if (!status.calendarGranted) {
+                    stringResource(R.string.settings_perm_allow)
+                } else {
+                    null
+                },
+                onPrimaryAction = onRequestCalendarPermission,
+                secondaryActionLabel = if (!status.calendarGranted) {
+                    stringResource(R.string.settings_perm_open_settings)
+                } else {
+                    null
+                },
+                onSecondaryAction = onOpenAppDetailsSettings,
+            )
+        }
+        item(key = "perm_notifications") {
+            PermissionRow(
+                title = stringResource(R.string.settings_perm_notifications),
+                statusText = if (status.notificationsGranted) {
+                    stringResource(R.string.settings_perm_granted)
+                } else {
+                    stringResource(R.string.settings_perm_denied)
+                },
+                primaryActionLabel = if (!status.notificationsGranted) {
+                    stringResource(R.string.settings_perm_allow)
+                } else {
+                    null
+                },
+                onPrimaryAction = onRequestNotificationsPermission,
+                secondaryActionLabel = if (!status.notificationsGranted) {
+                    stringResource(R.string.settings_perm_open_settings)
+                } else {
+                    null
+                },
+                onSecondaryAction = onOpenNotificationSettings,
+            )
+        }
+        if (status.exactAlarmApplicable) {
+            item(key = "perm_exact_alarm") {
+                PermissionRow(
+                    title = stringResource(R.string.settings_perm_exact_alarms),
+                    statusText = if (status.exactAlarmGranted) {
+                        stringResource(R.string.settings_perm_granted)
+                    } else {
+                        stringResource(R.string.settings_perm_denied)
+                    },
+                    primaryActionLabel = if (!status.exactAlarmGranted) {
+                        stringResource(R.string.settings_perm_open_settings)
+                    } else {
+                        null
+                    },
+                    onPrimaryAction = onOpenExactAlarmSettings,
+                )
+            }
+        }
+        item(key = "perm_spacer") {
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun PermissionRow(
+    title: String,
+    statusText: String,
+    primaryActionLabel: String? = null,
+    onPrimaryAction: () -> Unit = {},
+    secondaryActionLabel: String? = null,
+    onSecondaryAction: () -> Unit = {},
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 12.dp),
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = statusText,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (primaryActionLabel != null || secondaryActionLabel != null) {
+            Row(
+                modifier = Modifier.padding(top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (primaryActionLabel != null) {
+                    TextButton(onClick = onPrimaryAction) {
+                        Text(text = primaryActionLabel)
                     }
                 }
-            }
-
-            if (habitRows.isEmpty()) {
-                item(key = "habits_empty") {
-                    Text(
-                        text = stringResource(R.string.habits_empty),
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                if (secondaryActionLabel != null) {
+                    TextButton(onClick = onSecondaryAction) {
+                        Text(text = secondaryActionLabel)
+                    }
                 }
-            } else {
-                items(
-                    items = habitRows,
-                    key = { it.habit.id },
-                ) { row ->
-                    HabitEditRow(
-                        row = row,
-                        onRename = onRenameHabit,
-                        onRemove = onRemoveHabit,
-                    )
-                }
-            }
-
-            item(key = "bottom_spacer") {
-                Spacer(modifier = Modifier.height(24.dp))
             }
         }
     }
