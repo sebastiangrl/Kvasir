@@ -10,6 +10,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import app.kvasir.launcher.data.apps.LauncherAppsRepository
 import app.kvasir.launcher.data.home.DefaultHomeRepository
 import app.kvasir.launcher.data.prefs.PreferencesRepository
+import app.kvasir.launcher.domain.AppLabelFilter
 import app.kvasir.launcher.domain.FavoritesResolver
 import app.kvasir.launcher.domain.model.Habit
 import app.kvasir.launcher.domain.model.InstalledApp
@@ -22,7 +23,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * Spec 003 favorites + Spec 005 / RF-005-02, RF-005-03, RF-005-06, RF-005-07 —
+ * Spec 003 favorites + Spec 005 habits + Spec 008 / RF-008-01, RF-008-06 —
  * Home UI state; Composables never call DataStore / LauncherApps.
  */
 data class HomeHabitRow(
@@ -32,7 +33,10 @@ data class HomeHabitRow(
 
 data class HomeUiState(
     val showDefaultHomeCta: Boolean = false,
+    val searchQuery: String = "",
     val favorites: List<InstalledApp> = emptyList(),
+    /** Favorites before search filter (for empty vs no-match copy). */
+    val hasAnyFavorites: Boolean = false,
     val favoritesReady: Boolean = false,
     val habitRows: List<HomeHabitRow> = emptyList(),
 )
@@ -45,27 +49,49 @@ class HomeViewModel(
 ) : AndroidViewModel(application) {
 
     private val defaultHomeCta = MutableStateFlow(false)
+    /** Spec 008 / RF-008-05 — ephemeral; not persisted. */
+    private val searchQuery = MutableStateFlow("")
+
+    private data class HomeBase(
+        val showCta: Boolean,
+        val resolvedFavorites: List<InstalledApp>,
+        val favoritesReady: Boolean,
+        val habitRows: List<HomeHabitRow>,
+    )
 
     val uiState: StateFlow<HomeUiState> = combine(
-        defaultHomeCta,
-        launcherAppsRepository.snapshot,
-        preferencesRepository.favoriteKeys,
-        preferencesRepository.habits,
-        preferencesRepository.habitDayState,
-    ) { showCta, snapshot, favoriteKeys, habits, dayState ->
-        HomeUiState(
-            showDefaultHomeCta = showCta,
-            favorites = FavoritesResolver.resolve(
+        combine(
+            defaultHomeCta,
+            launcherAppsRepository.snapshot,
+            preferencesRepository.favoriteKeys,
+            preferencesRepository.habits,
+            preferencesRepository.habitDayState,
+        ) { showCta, snapshot, favoriteKeys, habits, dayState ->
+            val resolved = FavoritesResolver.resolve(
                 favoriteKeys = favoriteKeys,
                 installed = snapshot.apps,
-            ),
-            favoritesReady = snapshot.appsLoaded,
-            habitRows = habits.map { habit ->
-                HomeHabitRow(
-                    habit = habit,
-                    completed = habit.id in dayState.completedIds,
-                )
-            },
+            )
+            HomeBase(
+                showCta = showCta,
+                resolvedFavorites = resolved,
+                favoritesReady = snapshot.appsLoaded,
+                habitRows = habits.map { habit ->
+                    HomeHabitRow(
+                        habit = habit,
+                        completed = habit.id in dayState.completedIds,
+                    )
+                },
+            )
+        },
+        searchQuery,
+    ) { base, query ->
+        HomeUiState(
+            showDefaultHomeCta = base.showCta,
+            searchQuery = query,
+            favorites = AppLabelFilter.filterByQuery(base.resolvedFavorites, query),
+            hasAnyFavorites = base.resolvedFavorites.isNotEmpty(),
+            favoritesReady = base.favoritesReady,
+            habitRows = base.habitRows,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -89,6 +115,11 @@ class HomeViewModel(
     /** RF-003-03 — launch via repository (safe for Home process). */
     fun launchApp(app: InstalledApp) {
         launcherAppsRepository.launch(app)
+    }
+
+    /** Spec 008 / RF-008-01 — ephemeral search query. */
+    fun setSearchQuery(query: String) {
+        searchQuery.value = query
     }
 
     /** RF-005-03 — persist habit completion immediately. */

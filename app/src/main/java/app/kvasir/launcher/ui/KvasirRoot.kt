@@ -18,8 +18,8 @@ import app.kvasir.launcher.ui.settings.SettingsViewModel
 import app.kvasir.launcher.domain.model.ThemeMode
 
 /**
- * Spec 003 + Spec 004 / RF-004-01, RF-004-02, RF-004-08 —
- * Home | Settings; lazy overlay; Back: overlay > Settings > stay on Home.
+ * Spec 003 + Spec 004 / RF-004-01, RF-004-02, RF-004-08 + Spec 008 —
+ * Home | Settings; lazy overlay with search; Back: overlay > Settings > stay on Home.
  */
 @Composable
 fun KvasirRoot(
@@ -47,7 +47,10 @@ fun KvasirRoot(
                 HomeScreen(
                     showDefaultHomeCta = uiState.showDefaultHomeCta,
                     onChooseHomeClick = homeViewModel::openHomePicker,
+                    searchQuery = uiState.searchQuery,
+                    onSearchQueryChange = homeViewModel::setSearchQuery,
                     favorites = uiState.favorites,
+                    hasAnyFavorites = uiState.hasAnyFavorites,
                     favoritesReady = uiState.favoritesReady,
                     onFavoriteClick = homeViewModel::launchApp,
                     habitRows = uiState.habitRows,
@@ -80,6 +83,8 @@ fun KvasirRoot(
         if (overlayState.isOpen) {
             AppsOverlay(
                 selectedLetter = overlayState.selectedLetter,
+                searchQuery = overlayState.searchQuery,
+                onSearchQueryChange = overlayViewModel::setSearchQuery,
                 filteredApps = overlayState.filteredApps,
                 appsLoaded = overlayState.appsLoaded,
                 onSelectLetter = overlayViewModel::selectLetter,
