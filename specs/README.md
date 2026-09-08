@@ -14,16 +14,38 @@ Copiar desde `_templates/` al crear una spec:
 
 Siguiente número libre en tres dígitos (`001`, `002`, …). No reutilizar números. No mezclar dos specs en el mismo PR.
 
+## Hechas
+
+| Spec | Tema |
+| --- | --- |
+| `001` | Esqueleto Home |
+| `002` | `LauncherApps` + lista de verificación |
+| `003` | Favoritas + DataStore |
+| `004` | Overlay scrubber A–Z |
+| `005` | Hábitos del día |
+| `006` | Tema claro/oscuro |
+| `007` | Endurecimiento v1 (README, checklist, Release firmado) |
+| `008` | Búsqueda |
+| `009` | Gestos extra |
+| `010` | Iconos monocromos |
+
 ## Backlog sugerido (aún no escrito)
 
-1. `001` — Esqueleto Home: Activity Compose, Manifest HOME / `singleTask` / `onNewIntent` / Back, reloj-fecha aislado, empty state.
-2. `002` — `LauncherAppsRepository`: listar, callbacks, lanzar; `<queries>`; lista plana para verificar (sin arco).
-3. `003` — Favoritas en Home + DataStore.
-4. `004` — Overlay scrubber A–Z (salto por letra = debe; arco = debe intentar, degradable).
-5. `005` — Hábitos editables + check diario + reset por `epochDay`.
-6. `006` — Tema claro/oscuro Compose-only, persistido, sin recrear Activity.
+Cola post-v1 (tabla original 008–017 + Home Niagara). Los números **011+** de carpetas/etc. se desplazan: reloj y calendario se intercalaron al cerrar 010.
 
-No escribir estas specs hasta que el usuario pida «especifica X» en PLAN.
+| Spec | Tema |
+| --- | --- |
+| `011` | Reloj tipográfico (día grande estilo Niagara) |
+| `012` | Próximo evento de calendario (`READ_CALENDAR`, best-effort) |
+| `013` | Carpetas |
+| `014` | Rachas / historial de hábitos |
+| `015` | Widgets |
+| `016` | Badges |
+| `017` | Work profile |
+| `018` | Atajos |
+| `019` | Per-app theming |
+
+No escribir estas specs hasta que el usuario pida «especifica X» en PLAN. Siguiente número libre: **011**.
 
 ## Contrato
 
