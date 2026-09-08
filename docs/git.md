@@ -28,10 +28,19 @@ Workflow: `.github/workflows/ci.yml`.
 - JDK 17 Temurin + cache de Gradle.
 - Jobs Gradle **solo si existe `gradlew`** (el repo nació sin proyecto Android).
 - Mínimo: unit tests JVM + `assembleDebug`.
-- Artefacto: APK debug descargable (distribución = sideload, no Play Store).
-- **No:** firmar, publicar, emulador por defecto, instrumented en CI, Playwright, goldens masivos.
+- Artefacto: APK debug descargable (sideload).
+- **No** en este workflow: firmar release, publicar GitHub Release, emulador por defecto, instrumented, Playwright, goldens masivos.
 
 Instrumented tests: locales, únicamente cuando la spec lo exija.
+
+## Release firmado
+
+Workflow: `.github/workflows/release.yml` (spec **007** / RF-007-03).
+
+- Trigger: push de tags `v*` (p. ej. `v0.1.0`).
+- Con secrets de firma: `assembleRelease` + GitHub Release con el APK adjunto.
+- Sin secrets: el job **falla al inicio** con mensaje claro (no publica APK sin firmar).
+- Keystore y contraseñas: ver [`signing.md`](signing.md). **No** Play Store.
 
 ## Commits
 
