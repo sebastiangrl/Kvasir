@@ -9,13 +9,14 @@ import app.kvasir.launcher.data.pomodoro.PomodoroAlarmScheduler
 import app.kvasir.launcher.data.pomodoro.PomodoroController
 import app.kvasir.launcher.data.pomodoro.PomodoroNotifier
 import app.kvasir.launcher.data.prefs.PreferencesRepository
+import app.kvasir.launcher.data.settings.PermissionsStatusHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 
 /**
  * Spec 001 / RF-001-10 + Spec 002 / RF-002-11 + Spec 003 / RF-003-01 + Spec 010 / RF-010-05 +
- * Spec 012 / RF-012-05 + Spec 015 / RF-015-05 —
+ * Spec 012 / RF-012-05 + Spec 015 / RF-015-05 + Spec 016 / RF-016-04 —
  * Manual DI; Application context only (no Activity leaks).
  */
 class AppContainer(
@@ -58,5 +59,12 @@ class AppContainer(
             preferencesRepository = preferencesRepository,
             scheduler = pomodoroAlarmScheduler,
             notifier = pomodoroNotifier,
+        )
+
+    /** Spec 016 — permission / default-Home status for Settings hub. */
+    val permissionsStatusHelper: PermissionsStatusHelper =
+        PermissionsStatusHelper(
+            context = appContext,
+            defaultHomeRepository = defaultHomeRepository,
         )
 }

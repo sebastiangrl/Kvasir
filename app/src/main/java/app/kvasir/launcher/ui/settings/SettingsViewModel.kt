@@ -1,19 +1,30 @@
 package app.kvasir.launcher.ui.settings
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import android.content.Intent
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import app.kvasir.launcher.data.apps.LauncherAppsRepository
+import app.kvasir.launcher.data.home.DefaultHomeRepository
 import app.kvasir.launcher.data.prefs.PreferencesRepository
+import app.kvasir.launcher.data.settings.AppSettingsNavigator
+import app.kvasir.launcher.data.settings.PermissionsStatus
+import app.kvasir.launcher.data.settings.PermissionsStatusHelper
 import app.kvasir.launcher.domain.HabitStreak
 import app.kvasir.launcher.domain.model.Habit
 import app.kvasir.launcher.domain.model.InstalledApp
 import app.kvasir.launcher.domain.model.PomodoroConfig
+import app.kvasir.launcher.domain.model.SettingsSection
 import app.kvasir.launcher.domain.model.ThemeMode
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
@@ -21,8 +32,8 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 /**
- * Spec 003 + Spec 005 + Spec 006 + Spec 014 / RF-014-05 + Spec 015 / RF-015-04 —
- * Settings catalog, habits, theme, Pomodoro config; Composables never touch DataStore / LauncherApps.
+ * Spec 003 + Spec 005 + Spec 006 + Spec 014 + Spec 015 + Spec 016 / RF-016-01…05 —
+ * Settings hub + permissions CTAs; Composables never touch DataStore / PM / Settings.
  */
 data class SettingsFavoriteRow(
     val app: InstalledApp,
@@ -44,16 +55,44 @@ data class SettingsUiState(
     val pomodoroConfig: PomodoroConfig = PomodoroConfig.Default,
 )
 
+/** Spec 016 — hub asks Activity to run a runtime permission dialog. */
+enum class SettingsRuntimePermission {
+    Calendar,
+    Notifications,
+}
+
 class SettingsViewModel(
+    application: Application,
     private val launcherAppsRepository: LauncherAppsRepository,
     private val preferencesRepository: PreferencesRepository,
-) : ViewModel() {
+    private val defaultHomeRepository: DefaultHomeRepository,
+    private val permissionsStatusHelper: PermissionsStatusHelper,
+) : AndroidViewModel(application) {
 
     val themeMode: StateFlow<ThemeMode> = preferencesRepository.themeMode.stateIn(
         scope = viewModelScope,
         started = SharingStarted.Eagerly,
         initialValue = ThemeMode.Light,
     )
+
+    /** Spec 016 — null = hub index; otherwise open section. */
+    private val openSectionInternal = MutableStateFlow<SettingsSection?>(null)
+    val openSection: StateFlow<SettingsSection?> = openSectionInternal.asStateFlow()
+
+    private val permissionsStatusInternal = MutableStateFlow(
+        PermissionsStatus(
+            isDefaultHome = false,
+            calendarGranted = false,
+            notificationsGranted = false,
+            exactAlarmApplicable = false,
+            exactAlarmGranted = true,
+        ),
+    )
+    val permissionsStatus: StateFlow<PermissionsStatus> = permissionsStatusInternal.asStateFlow()
+
+    private val runtimePermissionRequestsInternal =
+        MutableSharedFlow<SettingsRuntimePermission>(extraBufferCapacity = 1)
+    val runtimePermissionRequests = runtimePermissionRequestsInternal.asSharedFlow()
 
     private data class SettingsCatalog(
         val rows: List<SettingsFavoriteRow>,
@@ -114,6 +153,8 @@ class SettingsViewModel(
     )
 
     fun onSettingsOpened() {
+        openSectionInternal.value = null
+        refreshPermissions()
         viewModelScope.launch {
             val snapshot = launcherAppsRepository.snapshot.value
             val apps = if (snapshot.appsLoaded) {
@@ -128,6 +169,62 @@ class SettingsViewModel(
                 preferencesRepository.setFavoriteKeys(pruned)
             }
         }
+    }
+
+    fun openSection(section: SettingsSection) {
+        openSectionInternal.value = section
+        if (section == SettingsSection.Permissions) {
+            refreshPermissions()
+        }
+    }
+
+    /** Spec 016 / RF-016-04 — re-read after resume or permission dialog. */
+    fun refreshPermissions() {
+        permissionsStatusInternal.value = permissionsStatusHelper.snapshot()
+    }
+
+    /** @return true if handled (returned to hub); false if already on hub (caller leaves Settings). */
+    fun navigateBackWithinSettings(): Boolean {
+        if (openSectionInternal.value != null) {
+            openSectionInternal.value = null
+            return true
+        }
+        return false
+    }
+
+    fun openHomePicker() {
+        val intent = defaultHomeRepository.createHomePickerIntent()
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        getApplication<Application>().startActivity(intent)
+    }
+
+    fun requestCalendarPermission() {
+        runtimePermissionRequestsInternal.tryEmit(SettingsRuntimePermission.Calendar)
+    }
+
+    fun requestNotificationsPermission() {
+        runtimePermissionRequestsInternal.tryEmit(SettingsRuntimePermission.Notifications)
+    }
+
+    fun openAppDetailsSettings() {
+        AppSettingsNavigator.openAppDetails(
+            getApplication(),
+            getApplication<Application>().packageName,
+        )
+    }
+
+    fun openNotificationSettings() {
+        AppSettingsNavigator.openNotificationSettings(
+            getApplication(),
+            getApplication<Application>().packageName,
+        )
+    }
+
+    fun openExactAlarmSettings() {
+        AppSettingsNavigator.openExactAlarmSettings(
+            getApplication(),
+            getApplication<Application>().packageName,
+        )
     }
 
     fun setFavorite(componentKey: String, favorite: Boolean) {
@@ -189,12 +286,19 @@ class SettingsViewModel(
         fun factory(
             launcherAppsRepository: LauncherAppsRepository,
             preferencesRepository: PreferencesRepository,
+            defaultHomeRepository: DefaultHomeRepository,
+            permissionsStatusHelper: PermissionsStatusHelper,
         ): ViewModelProvider.Factory =
             viewModelFactory {
                 initializer {
+                    val application = this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY]
+                        as Application
                     SettingsViewModel(
+                        application = application,
                         launcherAppsRepository = launcherAppsRepository,
                         preferencesRepository = preferencesRepository,
+                        defaultHomeRepository = defaultHomeRepository,
+                        permissionsStatusHelper = permissionsStatusHelper,
                     )
                 }
             }

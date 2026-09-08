@@ -22,11 +22,12 @@ import app.kvasir.launcher.domain.model.ThemeMode
 import app.kvasir.launcher.ui.KvasirRoot
 import app.kvasir.launcher.ui.home.HomeViewModel
 import app.kvasir.launcher.ui.icons.LocalAppIconLoader
+import app.kvasir.launcher.ui.settings.SettingsRuntimePermission
 import app.kvasir.launcher.ui.settings.SettingsViewModel
 import app.kvasir.launcher.ui.theme.KvasirTheme
 
 /**
- * Spec 001–006 + Spec 010 + Spec 012 + Spec 013 + Spec 015 / RF-015-06 —
+ * Spec 001–006 + Spec 010 + Spec 012 + Spec 013 + Spec 015 + Spec 016 / RF-016-04 —
  * HOME Activity hosts [KvasirRoot]; theme via Compose only.
  * Composables do not call DataStore / LauncherApps / CalendarContract / AlarmManager.
  */
@@ -48,6 +49,8 @@ class MainActivity : ComponentActivity() {
         SettingsViewModel.factory(
             launcherAppsRepository = app.container.launcherAppsRepository,
             preferencesRepository = app.container.preferencesRepository,
+            defaultHomeRepository = app.container.defaultHomeRepository,
+            permissionsStatusHelper = app.container.permissionsStatusHelper,
         )
     }
 
@@ -58,6 +61,7 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.RequestPermission(),
     ) {
         homeViewModel.refreshNextEvent()
+        settingsViewModel.refreshPermissions()
     }
 
     /** Spec 015 / RF-015-06 — on first Iniciar; settle start whether granted or denied. */
@@ -65,6 +69,21 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.RequestPermission(),
     ) {
         homeViewModel.onNotificationPermissionSettled()
+        settingsViewModel.refreshPermissions()
+    }
+
+    /** Spec 016 — hub CTAs (do not start Pomodoro). */
+    private val hubCalendarPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) {
+        homeViewModel.refreshNextEvent()
+        settingsViewModel.refreshPermissions()
+    }
+
+    private val hubNotificationsPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) {
+        settingsViewModel.refreshPermissions()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -90,6 +109,22 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            LaunchedEffect(settingsViewModel) {
+                settingsViewModel.runtimePermissionRequests.collect { request ->
+                    when (request) {
+                        SettingsRuntimePermission.Calendar ->
+                            hubCalendarPermission.launch(Manifest.permission.READ_CALENDAR)
+                        SettingsRuntimePermission.Notifications -> {
+                            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                                settingsViewModel.refreshPermissions()
+                            } else {
+                                hubNotificationsPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                        }
+                    }
+                }
+            }
+
             CompositionLocalProvider(
                 LocalAppIconLoader provides app.container.appIconLoader,
             ) {
@@ -108,6 +143,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         homeViewModel.onResume()
+        settingsViewModel.refreshPermissions()
         maybeRequestCalendarPermissionOnce()
     }
 

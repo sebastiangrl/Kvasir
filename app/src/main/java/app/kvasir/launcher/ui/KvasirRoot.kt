@@ -17,8 +17,8 @@ import app.kvasir.launcher.ui.settings.SettingsScreen
 import app.kvasir.launcher.ui.settings.SettingsViewModel
 
 /**
- * Spec 003 + Spec 008 + Spec 009 + Spec 012 + Spec 013 + Spec 015 —
- * Home (Niagara scrubber) | Settings. Overlay A–Z removed (RF-013-05).
+ * Spec 003 + Spec 008 + Spec 009 + Spec 012 + Spec 013 + Spec 015 + Spec 016 —
+ * Home (Niagara scrubber) | Settings hub. Overlay A–Z removed (RF-013-05).
  */
 @Composable
 fun KvasirRoot(
@@ -28,9 +28,11 @@ fun KvasirRoot(
 ) {
     var destination by rememberSaveable { mutableStateOf(RootDestination.Home) }
 
-    // RF-003-05 — Settings Back → Home.
+    // Spec 016 / RF-016-02 — section → hub → Home.
     BackHandler(enabled = destination == RootDestination.Settings) {
-        destination = RootDestination.Home
+        if (!settingsViewModel.navigateBackWithinSettings()) {
+            destination = RootDestination.Home
+        }
     }
 
     Box(modifier = modifier) {
@@ -81,7 +83,11 @@ fun KvasirRoot(
             }
             RootDestination.Settings -> {
                 val uiState by settingsViewModel.uiState.collectAsStateWithLifecycle()
+                val section by settingsViewModel.openSection.collectAsStateWithLifecycle()
+                val permissionsStatus by settingsViewModel.permissionsStatus.collectAsStateWithLifecycle()
                 SettingsScreen(
+                    section = section,
+                    onOpenSection = settingsViewModel::openSection,
                     rows = uiState.rows,
                     appsLoaded = uiState.appsLoaded,
                     onFavoriteChange = settingsViewModel::setFavorite,
@@ -95,7 +101,18 @@ fun KvasirRoot(
                     onPomodoroWorkMinutes = settingsViewModel::setPomodoroWorkMinutes,
                     onPomodoroBreakMinutes = settingsViewModel::setPomodoroBreakMinutes,
                     onPomodoroSessions = settingsViewModel::setPomodoroSessions,
-                    onBack = { destination = RootDestination.Home },
+                    permissionsStatus = permissionsStatus,
+                    onOpenHomePicker = settingsViewModel::openHomePicker,
+                    onRequestCalendarPermission = settingsViewModel::requestCalendarPermission,
+                    onRequestNotificationsPermission = settingsViewModel::requestNotificationsPermission,
+                    onOpenAppDetailsSettings = settingsViewModel::openAppDetailsSettings,
+                    onOpenNotificationSettings = settingsViewModel::openNotificationSettings,
+                    onOpenExactAlarmSettings = settingsViewModel::openExactAlarmSettings,
+                    onBack = {
+                        if (!settingsViewModel.navigateBackWithinSettings()) {
+                            destination = RootDestination.Home
+                        }
+                    },
                 )
             }
         }
