@@ -13,12 +13,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -49,11 +49,14 @@ import app.kvasir.launcher.domain.model.PomodoroSession
 import app.kvasir.launcher.domain.model.PomodoroStatus
 import app.kvasir.launcher.ui.gesture.onVerticalSwipe
 import app.kvasir.launcher.ui.icons.MonochromeAppIcon
+import app.kvasir.launcher.ui.theme.KvasirPillShape
+import app.kvasir.launcher.ui.theme.KvasirRoundCheckbox
 import kotlinx.coroutines.delay
 
 /**
  * Spec 003–012 + Spec 013 / RF-013-01…04 + Spec 015 / RF-015-03, RF-015-07 +
- * Spec 017 / RF-017-04…06 + Spec 018 / RF-018-02…05 —
+ * Spec 017 / RF-017-04…06 + Spec 018 / RF-018-02…05 +
+ * Spec 019 / RF-019-01, RF-019-03, RF-019-04, RF-019-05, RF-019-06 —
  * Unified Home: ★ chrome or letter/search catalog + scrubber rail + Pomodoro + badges.
  * No DataStore / PackageManager / LauncherApps / CalendarContract / AlarmManager /
  * NotificationListener here.
@@ -102,6 +105,7 @@ fun HomeScreen(
         modifier = modifier
             .fillMaxSize()
             .statusBarsPadding()
+            .navigationBarsPadding()
             // Spec 013 / RF-013-05 — swipe-up no longer opens apps overlay (no-op).
             .onVerticalSwipe(
                 onSwipeDown = onExpandSystemPanel,
@@ -251,20 +255,12 @@ private fun FavoritesHomeBody(
     badgedPackages: Set<String>,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
-        HomeClock()
-
+        // Spec 019 / RF-019-06 — clock composition owns the next-event line (012).
         val eventLine = nextEvent?.let { NextEventLineFormat.format(it) }.orEmpty()
-        if (eventLine.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = eventLine,
-                modifier = Modifier
-                    .padding(horizontal = 24.dp)
-                    .clickable(onClick = onNextEventClick),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+        HomeClock(
+            eventLine = eventLine,
+            onEventClick = onNextEventClick,
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -275,7 +271,8 @@ private fun FavoritesHomeBody(
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp),
             singleLine = true,
-            label = { Text(text = stringResource(R.string.search_apps_hint)) },
+            shape = KvasirPillShape,
+            placeholder = { Text(text = stringResource(R.string.search_apps_hint)) },
         )
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -377,15 +374,16 @@ private fun FavoritesHomeBody(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                            .padding(horizontal = 24.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Checkbox(
+                        KvasirRoundCheckbox(
                             checked = row.completed,
                             onCheckedChange = { checked ->
                                 onHabitCheckedChange(row.habit.id, checked)
                             },
                         )
+                        Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = if (row.streak >= 1) {
                                 "${row.habit.label} · ${row.streak}"
@@ -428,7 +426,8 @@ private fun CatalogHomeBody(
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp),
             singleLine = true,
-            label = { Text(text = stringResource(R.string.search_apps_hint)) },
+            shape = KvasirPillShape,
+            placeholder = { Text(text = stringResource(R.string.search_apps_hint)) },
         )
         Spacer(modifier = Modifier.height(12.dp))
 

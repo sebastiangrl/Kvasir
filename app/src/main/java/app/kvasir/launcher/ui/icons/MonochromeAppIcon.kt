@@ -1,8 +1,5 @@
 package app.kvasir.launcher.ui.icons
 
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.drawable.Drawable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
@@ -23,6 +20,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.kvasir.launcher.data.apps.AppIconLoader
+import app.kvasir.launcher.data.apps.IconSilhouette
 import app.kvasir.launcher.domain.model.InstalledApp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -35,8 +33,8 @@ val LocalAppIconLoader = staticCompositionLocalOf<AppIconLoader> {
 }
 
 /**
- * Spec 010 / RF-010-03, RF-010-04, RF-010-06 —
- * Monochrome-tinted app icon; does not call LauncherApps / PackageManager.
+ * Spec 010 / RF-010-03, RF-010-04, RF-010-06 + Spec 019 / RF-019-02 —
+ * Monochrome-tinted app **glyph** (adaptive foreground); does not call LauncherApps / PackageManager.
  */
 @Composable
 fun MonochromeAppIcon(
@@ -52,7 +50,7 @@ fun MonochromeAppIcon(
     LaunchedEffect(app.componentKey, px) {
         image = withContext(Dispatchers.Default) {
             val drawable = loader.loadDrawable(app) ?: return@withContext null
-            drawable.toBoundedBitmap(px, px).asImageBitmap()
+            IconSilhouette.toBoundedBitmap(drawable, px).asImageBitmap()
         }
     }
 
@@ -67,14 +65,4 @@ fun MonochromeAppIcon(
             )
         }
     }
-}
-
-/** Spec 010 / RF-010-06 — bounded decode; no full-res launcher bitmap kept in UI state. */
-private fun Drawable.toBoundedBitmap(width: Int, height: Int): Bitmap {
-    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-    val canvas = Canvas(bitmap)
-    mutate()
-    setBounds(0, 0, width, height)
-    draw(canvas)
-    return bitmap
 }

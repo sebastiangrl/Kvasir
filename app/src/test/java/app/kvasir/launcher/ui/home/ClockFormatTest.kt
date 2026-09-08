@@ -8,7 +8,8 @@ import java.time.ZoneOffset
 import java.util.Locale
 
 /**
- * Spec 001 / RF-001-06 + Spec 011 / RF-011-01…03 — JVM unit tests for clock formatting.
+ * Spec 001 / RF-001-06 + Spec 011 / RF-011-01…03 + Spec 019 / RF-019-06 —
+ * JVM unit tests for clock formatting.
  */
 class ClockFormatTest {
 
@@ -18,7 +19,7 @@ class ClockFormatTest {
     private val esEs: Locale = Locale.forLanguageTag("es-ES")
 
     @Test
-    fun formatTime_containsHourAndMinute_forUsLocale() {
+    fun formatTime_short_containsHourAndMinute_noSeconds_forUsLocale() {
         val text = ClockFormat.formatTime(
             instant = noonUtc,
             zoneId = ZoneOffset.UTC,
@@ -26,6 +27,7 @@ class ClockFormatTest {
         )
         assertTrue("expected hour in '$text'", text.contains("12"))
         assertTrue("expected minute in '$text'", text.contains("34"))
+        assertFalse("expected no seconds in SHORT time '$text'", text.contains("56"))
     }
 
     @Test
@@ -51,19 +53,20 @@ class ClockFormatTest {
     }
 
     @Test
-    fun formatDate_short_us_hasDayAndMonth_withoutYear() {
+    fun formatDate_short_us_isMonthDayUppercase_withoutYear() {
         val text = ClockFormat.formatDate(
             instant = noonUtc,
             zoneId = ZoneOffset.UTC,
             locale = Locale.US,
         )
         assertTrue("expected day in '$text'", text.contains("8"))
-        assertTrue("expected Sep in '$text'", text.contains("Sep"))
+        assertTrue("expected SEP in '$text'", text.contains("SEP"))
+        assertTrue("expected uppercase '$text'", text == text.uppercase(Locale.US))
         assertFalse("expected no year in short date '$text'", text.contains("2026"))
     }
 
     @Test
-    fun formatDate_short_es_hasDayAndMonth_withoutYear() {
+    fun formatDate_short_es_hasMonthAndDay_withoutYear() {
         val text = ClockFormat.formatDate(
             instant = noonUtc,
             zoneId = ZoneOffset.UTC,
@@ -72,8 +75,9 @@ class ClockFormatTest {
         assertTrue("expected day in '$text'", text.contains("8"))
         assertTrue(
             "expected sep signal in '$text'",
-            text.contains("sep", ignoreCase = true) || text.contains("sept", ignoreCase = true),
+            text.contains("SEP", ignoreCase = true) || text.contains("SEPT", ignoreCase = true),
         )
+        assertTrue("expected uppercase '$text'", text == text.uppercase(esEs))
         assertFalse("expected no year in short date '$text'", text.contains("2026"))
     }
 }

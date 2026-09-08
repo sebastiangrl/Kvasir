@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Spec 001 / RF-001-11 — no AppCompat DayNight -->
+<!-- Spec 001 / RF-001-11 + Spec 019 / RF-019-01 — no AppCompat DayNight; transparent system bars -->
 <resources>
-    <style name="Theme.Kvasir" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Kvasir" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
 </resources>

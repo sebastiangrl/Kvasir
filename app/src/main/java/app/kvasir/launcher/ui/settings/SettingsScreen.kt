@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -36,9 +37,11 @@ import app.kvasir.launcher.R
 import app.kvasir.launcher.data.settings.PermissionsStatus
 import app.kvasir.launcher.domain.model.PomodoroConfig
 import app.kvasir.launcher.domain.model.SettingsSection
+import app.kvasir.launcher.ui.theme.KvasirPillShape
 
 /**
- * Spec 003 + Spec 005 + Spec 006 + Spec 014 + Spec 015 + Spec 016 / RF-016-01…05 —
+ * Spec 003 + Spec 005 + Spec 006 + Spec 014 + Spec 015 + Spec 016 / RF-016-01…05 +
+ * Spec 019 / RF-019-03 —
  * Settings hub + sections; no DataStore / LauncherApps / PackageManager here.
  */
 @Composable
@@ -73,6 +76,7 @@ fun SettingsScreen(
         modifier = modifier
             .fillMaxSize()
             .statusBarsPadding()
+            .navigationBarsPadding()
             .padding(top = 8.dp),
     ) {
         val title = when (section) {
@@ -325,7 +329,8 @@ private fun HabitsSection(
                     onValueChange = { newHabitLabel = it },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
-                    label = { Text(stringResource(R.string.habit_add_label)) },
+                    shape = KvasirPillShape,
+                    placeholder = { Text(stringResource(R.string.habit_add_label)) },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(
                         onDone = {
@@ -639,6 +644,7 @@ private fun HabitEditRow(
                 onValueChange = { draft = it },
                 modifier = Modifier.weight(1f),
                 singleLine = true,
+                shape = KvasirPillShape,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(
                     onDone = {
