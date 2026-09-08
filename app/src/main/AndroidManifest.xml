@@ -5,6 +5,9 @@
     <!-- Spec 009 / RF-009-01 — expand QS / notifications panel (normal permission). -->
     <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
 
+    <!-- Spec 012 / RF-012-01, RF-012-08 — read next event only (no WRITE_CALENDAR). -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />

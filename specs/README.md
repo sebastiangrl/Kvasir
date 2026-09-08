@@ -28,6 +28,7 @@ Siguiente número libre en tres dígitos (`001`, `002`, …). No reutilizar núm
 | `008` | Búsqueda |
 | `009` | Gestos extra |
 | `010` | Iconos monocromos |
+| `011` | Reloj tipográfico |
 
 ## Backlog sugerido (aún no escrito)
 
@@ -35,7 +36,6 @@ Cola post-v1 (tabla original 008–017 + Home Niagara). Los números **011+** de
 
 | Spec | Tema |
 | --- | --- |
-| `011` | Reloj tipográfico (día grande estilo Niagara) |
 | `012` | Próximo evento de calendario (`READ_CALENDAR`, best-effort) |
 | `013` | Carpetas |
 | `014` | Rachas / historial de hábitos |
@@ -45,7 +45,7 @@ Cola post-v1 (tabla original 008–017 + Home Niagara). Los números **011+** de
 | `018` | Atajos |
 | `019` | Per-app theming |
 
-No escribir estas specs hasta que el usuario pida «especifica X» en PLAN. Siguiente número libre: **011**.
+No escribir estas specs hasta que el usuario pida «especifica X» en PLAN. Siguiente número libre: **012**.
 
 ## Contrato
 
