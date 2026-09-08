@@ -279,7 +279,11 @@ private fun FavoritesHomeBody(
                             },
                         )
                         Text(
-                            text = row.habit.label,
+                            text = if (row.streak >= 1) {
+                                "${row.habit.label} · ${row.streak}"
+                            } else {
+                                row.habit.label
+                            },
                             modifier = Modifier
                                 .weight(1f)
                                 .clickable {

@@ -16,6 +16,7 @@ import app.kvasir.launcher.data.prefs.PreferencesRepository
 import app.kvasir.launcher.data.system.SystemPanels
 import app.kvasir.launcher.domain.AppLabelFilter
 import app.kvasir.launcher.domain.FavoritesResolver
+import app.kvasir.launcher.domain.HabitStreak
 import app.kvasir.launcher.domain.model.Habit
 import app.kvasir.launcher.domain.model.HomeListMode
 import app.kvasir.launcher.domain.model.InstalledApp
@@ -28,15 +29,18 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 /**
- * Spec 003 favorites + Spec 005 habits + Spec 008 + Spec 012 +
- * Spec 013 / RF-013-02, RF-013-03, RF-013-06, RF-013-07 —
+ * Spec 003 favorites + Spec 005 habits + Spec 008 + Spec 012 + Spec 013 +
+ * Spec 014 / RF-014-04 —
  * Home UI state; Composables never call DataStore / LauncherApps / CalendarContract.
  */
 data class HomeHabitRow(
     val habit: Habit,
     val completed: Boolean,
+    /** Spec 014 — consecutive days; show in UI when ≥ 1. */
+    val streak: Int = 0,
 )
 
 data class HomeUiState(
@@ -77,6 +81,15 @@ class HomeViewModel(
     private val nextEventInternal = MutableStateFlow<NextCalendarEvent?>(null)
     val nextEvent: StateFlow<NextCalendarEvent?> = nextEventInternal.asStateFlow()
 
+    private data class HomeAppsBase(
+        val showCta: Boolean,
+        val resolvedFavorites: List<InstalledApp>,
+        val allApps: List<InstalledApp>,
+        val favoritesReady: Boolean,
+        val habits: List<Habit>,
+        val completedIds: Set<String>,
+    )
+
     private data class HomeBase(
         val showCta: Boolean,
         val resolvedFavorites: List<InstalledApp>,
@@ -87,25 +100,45 @@ class HomeViewModel(
 
     val uiState: StateFlow<HomeUiState> = combine(
         combine(
-            defaultHomeCta,
-            launcherAppsRepository.snapshot,
-            preferencesRepository.favoriteKeys,
-            preferencesRepository.habits,
-            preferencesRepository.habitDayState,
-        ) { showCta, snapshot, favoriteKeys, habits, dayState ->
-            val resolved = FavoritesResolver.resolve(
-                favoriteKeys = favoriteKeys,
-                installed = snapshot.apps,
-            )
+            combine(
+                defaultHomeCta,
+                launcherAppsRepository.snapshot,
+                preferencesRepository.favoriteKeys,
+                preferencesRepository.habits,
+                preferencesRepository.habitDayState,
+            ) { showCta, snapshot, favoriteKeys, habits, dayState ->
+                val resolved = FavoritesResolver.resolve(
+                    favoriteKeys = favoriteKeys,
+                    installed = snapshot.apps,
+                )
+                HomeAppsBase(
+                    showCta = showCta,
+                    resolvedFavorites = resolved,
+                    allApps = snapshot.apps,
+                    favoritesReady = snapshot.appsLoaded,
+                    habits = habits,
+                    completedIds = dayState.completedIds,
+                )
+            },
+            preferencesRepository.habitHistory,
+        ) { appsBase, history ->
+            val today = LocalDate.now().toEpochDay()
             HomeBase(
-                showCta = showCta,
-                resolvedFavorites = resolved,
-                allApps = snapshot.apps,
-                favoritesReady = snapshot.appsLoaded,
-                habitRows = habits.map { habit ->
+                showCta = appsBase.showCta,
+                resolvedFavorites = appsBase.resolvedFavorites,
+                allApps = appsBase.allApps,
+                favoritesReady = appsBase.favoritesReady,
+                habitRows = appsBase.habits.map { habit ->
+                    val completed = habit.id in appsBase.completedIds
                     HomeHabitRow(
                         habit = habit,
-                        completed = habit.id in dayState.completedIds,
+                        completed = completed,
+                        streak = HabitStreak.streakForHabit(
+                            history = history,
+                            habitId = habit.id,
+                            todayCompleted = completed,
+                            todayEpochDay = today,
+                        ),
                     )
                 },
             )
@@ -119,7 +152,6 @@ class HomeViewModel(
             query = query,
             mode = mode,
         )
-        // Keep `favorites` as ★-scoped filter for pre-T2 HomeScreen (008).
         val favoritesForLegacyUi = AppLabelFilter.filterByQuery(base.resolvedFavorites, query)
         HomeUiState(
             showDefaultHomeCta = base.showCta,
@@ -139,11 +171,14 @@ class HomeViewModel(
         initialValue = HomeUiState(),
     )
 
-    /** RF-001-09 — re-evaluate default-Home role when Activity resumes. */
+    /** RF-001-09 + Spec 014 / RF-014-02 — default-Home role + persist habit day roll. */
     fun onResume() {
         val isDefault = defaultHomeRepository.isDefaultHome()
         defaultHomeCta.update { !isDefault }
         refreshNextEvent()
+        viewModelScope.launch {
+            preferencesRepository.ensureHabitDayRolled()
+        }
     }
 
     /**
