@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Spec 001 / RF-001-02, RF-001-07, RF-001-08 -->
+<resources>
+    <string name="app_name">Kvasir</string>
+    <string name="home_empty_favorites">Sin favoritas todavía.</string>
+    <string name="home_not_default_message">Elige Kvasir como app de Inicio.</string>
+    <string name="home_choose_default_action">Elegir como Inicio</string>
+</resources>
