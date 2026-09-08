@@ -1,0 +1,21 @@
+# Spec 001 / RF-001-01 — Android / Gradle ignores
+*.iml
+.gradle/
+.idea/
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+build/
+*/build/
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+bin/
+gen/
+out/
+.DS_Store
+*.log
+.kotlin/

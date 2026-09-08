@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Spec 001 / RF-001-11 — no AppCompat DayNight -->
+<resources>
+    <style name="Theme.Kvasir" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

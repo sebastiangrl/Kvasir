@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Spec 001 / RF-001-03, RF-001-04, RF-001-05 — HOME contract (reversible; no device admin). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:name=".KvasirApp"
+        android:allowBackup="true"
+        android:icon="@drawable/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Kvasir">
+
+        <!--
+          RF-001-03: singleTask + clearTaskOnLaunch + stateNotNeeded.
+          Spec also named resumeOnTaskLaunch — that attribute does not exist in
+          the platform Manifest schema (AAPT). resumeWhilePausing is the real
+          launcher flag used by AOSP Launcher3 for the same warm-resume intent.
+        -->
+        <activity
+            android:name=".MainActivity"
+            android:clearTaskOnLaunch="true"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:resumeWhilePausing="true"
+            android:stateNotNeeded="true"
+            android:enableOnBackInvokedCallback="true"
+            android:theme="@style/Theme.Kvasir">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>
