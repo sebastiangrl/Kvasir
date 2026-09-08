@@ -31,18 +31,17 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import app.kvasir.launcher.R
-import app.kvasir.launcher.domain.model.Habit
 
 /**
- * Spec 003 + Spec 005 + Spec 006 / RF-006-03, RF-006-05 —
- * Favorites catalog + habit CRUD + theme Switch; no DataStore / LauncherApps here.
+ * Spec 003 + Spec 005 + Spec 006 + Spec 014 / RF-014-05 —
+ * Favorites catalog + habit CRUD (+ streak / 7-day) + theme Switch; no DataStore / LauncherApps here.
  */
 @Composable
 fun SettingsScreen(
     rows: List<SettingsFavoriteRow>,
     appsLoaded: Boolean,
     onFavoriteChange: (componentKey: String, favorite: Boolean) -> Unit,
-    habits: List<Habit>,
+    habitRows: List<SettingsHabitRow>,
     onAddHabit: (label: String) -> Unit,
     onRemoveHabit: (habitId: String) -> Unit,
     onRenameHabit: (habitId: String, label: String) -> Unit,
@@ -203,7 +202,7 @@ fun SettingsScreen(
                 }
             }
 
-            if (habits.isEmpty()) {
+            if (habitRows.isEmpty()) {
                 item(key = "habits_empty") {
                     Text(
                         text = stringResource(R.string.habits_empty),
@@ -214,11 +213,11 @@ fun SettingsScreen(
                 }
             } else {
                 items(
-                    items = habits,
-                    key = { it.id },
-                ) { habit ->
+                    items = habitRows,
+                    key = { it.habit.id },
+                ) { row ->
                     HabitEditRow(
-                        habit = habit,
+                        row = row,
                         onRename = onRenameHabit,
                         onRemove = onRemoveHabit,
                     )
@@ -234,42 +233,71 @@ fun SettingsScreen(
 
 @Composable
 private fun HabitEditRow(
-    habit: Habit,
+    row: SettingsHabitRow,
     onRename: (habitId: String, label: String) -> Unit,
     onRemove: (habitId: String) -> Unit,
 ) {
+    val habit = row.habit
     var draft by remember(habit.id) { mutableStateOf(habit.label) }
     LaunchedEffect(habit.label) {
         draft = habit.label
     }
     val focusManager = LocalFocusManager.current
 
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 24.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
     ) {
-        OutlinedTextField(
-            value = draft,
-            onValueChange = { draft = it },
-            modifier = Modifier.weight(1f),
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(
-                onDone = {
-                    val trimmed = draft.trim()
-                    if (trimmed.isNotEmpty() && trimmed != habit.label) {
-                        onRename(habit.id, trimmed)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OutlinedTextField(
+                value = draft,
+                onValueChange = { draft = it },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        val trimmed = draft.trim()
+                        if (trimmed.isNotEmpty() && trimmed != habit.label) {
+                            onRename(habit.id, trimmed)
+                        } else {
+                            draft = habit.label
+                        }
+                        focusManager.clearFocus()
+                    },
+                ),
+            )
+            TextButton(onClick = { onRemove(habit.id) }) {
+                Text(text = stringResource(R.string.habit_delete_action))
+            }
+        }
+        Row(
+            modifier = Modifier.padding(top = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            if (row.streak >= 1) {
+                Text(
+                    text = "· ${row.streak}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            row.lastSevenDays.forEach { done ->
+                Text(
+                    text = if (done) "●" else "○",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (done) {
+                        MaterialTheme.colorScheme.primary
                     } else {
-                        draft = habit.label
-                    }
-                    focusManager.clearFocus()
-                },
-            ),
-        )
-        TextButton(onClick = { onRemove(habit.id) }) {
-            Text(text = stringResource(R.string.habit_delete_action))
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
+            }
         }
     }
 }

@@ -7,6 +7,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import app.kvasir.launcher.data.apps.LauncherAppsRepository
 import app.kvasir.launcher.data.prefs.PreferencesRepository
+import app.kvasir.launcher.domain.HabitStreak
 import app.kvasir.launcher.domain.model.Habit
 import app.kvasir.launcher.domain.model.InstalledApp
 import app.kvasir.launcher.domain.model.ThemeMode
@@ -16,20 +17,28 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 /**
- * Spec 003 + Spec 005 + Spec 006 / RF-006-02, RF-006-03, RF-006-05 —
- * Settings catalog, habits, theme; Composables never touch DataStore / LauncherApps.
+ * Spec 003 + Spec 005 + Spec 006 + Spec 014 / RF-014-05 —
+ * Settings catalog, habits (+ streak / 7-day), theme; Composables never touch DataStore / LauncherApps.
  */
 data class SettingsFavoriteRow(
     val app: InstalledApp,
     val isFavorite: Boolean,
 )
 
+data class SettingsHabitRow(
+    val habit: Habit,
+    val streak: Int,
+    /** Index 0 = six days ago … 6 = today. */
+    val lastSevenDays: List<Boolean>,
+)
+
 data class SettingsUiState(
     val rows: List<SettingsFavoriteRow> = emptyList(),
     val appsLoaded: Boolean = false,
-    val habits: List<Habit> = emptyList(),
+    val habitRows: List<SettingsHabitRow> = emptyList(),
     val themeMode: ThemeMode = ThemeMode.Light,
 )
 
@@ -38,31 +47,60 @@ class SettingsViewModel(
     private val preferencesRepository: PreferencesRepository,
 ) : ViewModel() {
 
-    /**
-     * Theme for [app.kvasir.launcher.MainActivity] / [app.kvasir.launcher.ui.theme.KvasirTheme].
-     * Eager so theme stays fresh while Activity holds this VM (plan riesgo 2).
-     */
     val themeMode: StateFlow<ThemeMode> = preferencesRepository.themeMode.stateIn(
         scope = viewModelScope,
         started = SharingStarted.Eagerly,
         initialValue = ThemeMode.Light,
     )
 
+    private data class SettingsCatalog(
+        val rows: List<SettingsFavoriteRow>,
+        val appsLoaded: Boolean,
+        val habitRows: List<SettingsHabitRow>,
+    )
+
     val uiState: StateFlow<SettingsUiState> = combine(
-        launcherAppsRepository.snapshot,
-        preferencesRepository.favoriteKeys,
-        preferencesRepository.habits,
+        combine(
+            launcherAppsRepository.snapshot,
+            preferencesRepository.favoriteKeys,
+            preferencesRepository.habits,
+            preferencesRepository.habitDayState,
+            preferencesRepository.habitHistory,
+        ) { snapshot, favoriteKeys, habits, dayState, history ->
+            val today = LocalDate.now().toEpochDay()
+            SettingsCatalog(
+                rows = snapshot.apps.map { app ->
+                    SettingsFavoriteRow(
+                        app = app,
+                        isFavorite = app.componentKey in favoriteKeys,
+                    )
+                },
+                appsLoaded = snapshot.appsLoaded,
+                habitRows = habits.map { habit ->
+                    val completed = habit.id in dayState.completedIds
+                    val days = history[habit.id].orEmpty()
+                    SettingsHabitRow(
+                        habit = habit,
+                        streak = HabitStreak.streak(
+                            historyDays = days,
+                            todayCompleted = completed,
+                            todayEpochDay = today,
+                        ),
+                        lastSevenDays = HabitStreak.lastSevenDays(
+                            historyDays = days,
+                            todayCompleted = completed,
+                            todayEpochDay = today,
+                        ),
+                    )
+                },
+            )
+        },
         preferencesRepository.themeMode,
-    ) { snapshot, favoriteKeys, habits, theme ->
+    ) { catalog, theme ->
         SettingsUiState(
-            rows = snapshot.apps.map { app ->
-                SettingsFavoriteRow(
-                    app = app,
-                    isFavorite = app.componentKey in favoriteKeys,
-                )
-            },
-            appsLoaded = snapshot.appsLoaded,
-            habits = habits,
+            rows = catalog.rows,
+            appsLoaded = catalog.appsLoaded,
+            habitRows = catalog.habitRows,
             themeMode = theme,
         )
     }.stateIn(
@@ -71,7 +109,6 @@ class SettingsViewModel(
         initialValue = SettingsUiState(),
     )
 
-    /** Prune orphan favorite keys when entering Settings. */
     fun onSettingsOpened() {
         viewModelScope.launch {
             val snapshot = launcherAppsRepository.snapshot.value
@@ -114,7 +151,6 @@ class SettingsViewModel(
         }
     }
 
-    /** RF-006-03 — Switch checked = Dark; Compose-only, no setDefaultNightMode. */
     fun setDarkTheme(dark: Boolean) {
         viewModelScope.launch {
             preferencesRepository.setThemeMode(

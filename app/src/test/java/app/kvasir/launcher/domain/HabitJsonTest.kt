@@ -52,4 +52,21 @@ class HabitJsonTest {
     fun dayState_corrupt_isNull() {
         assertNull(HabitJson.decodeDayState("{bad"))
     }
+
+    @Test
+    fun history_roundTrip() {
+        val history = mapOf(
+            "a" to setOf(10L, 11L),
+            "b" to setOf(11L),
+        )
+        val encoded = HabitJson.encodeHistory(history)
+        assertEquals(history, HabitJson.decodeHistory(encoded))
+    }
+
+    @Test
+    fun history_nullOrCorrupt_isEmpty() {
+        assertTrue(HabitJson.decodeHistory(null).isEmpty())
+        assertTrue(HabitJson.decodeHistory("").isEmpty())
+        assertTrue(HabitJson.decodeHistory("{bad").isEmpty())
+    }
 }

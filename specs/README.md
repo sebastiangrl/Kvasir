@@ -31,12 +31,12 @@ Siguiente número libre en tres dígitos (`001`, `002`, …). No reutilizar núm
 | `011` | Reloj tipográfico |
 | `012` | Próximo evento de calendario |
 | `013` | Home + scrubber unificado (Niagara ★ / A–Z) |
+| `014` | Rachas / historial de hábitos |
 
 ## Backlog sugerido (aún no escrito)
 
 | Spec | Tema |
 | --- | --- |
-| `014` | Rachas / historial de hábitos |
 | `015` | Widgets |
 | `016` | Badges |
 | `017` | Work profile |
@@ -45,7 +45,7 @@ Siguiente número libre en tres dígitos (`001`, `002`, …). No reutilizar núm
 
 **Descartado del backlog:** carpetas-grupo de apps (tipo carpeta “Social”). Sustituido por scrubber unificado (013).
 
-No escribir estas specs hasta que el usuario pida «especifica X» en PLAN. Siguiente número libre: **014**.
+No escribir estas specs hasta que el usuario pida «especifica X» en PLAN. Siguiente número libre: **015**.
 
 ## Contrato
 

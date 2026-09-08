@@ -2,12 +2,13 @@ package app.kvasir.launcher.domain
 
 import app.kvasir.launcher.domain.model.Habit
 import app.kvasir.launcher.domain.model.HabitDayState
+import app.kvasir.launcher.domain.model.HabitHistory
 import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Spec 005 / RF-005-01, RF-005-08 —
- * org.json codec for habits and day state; corrupt input → empty defaults.
+ * Spec 005 / RF-005-01, RF-005-08 + Spec 014 / RF-014-01 —
+ * org.json codec for habits, day state, and history; corrupt input → empty defaults.
  */
 object HabitJson {
 
@@ -66,6 +67,40 @@ object HabitJson {
             HabitDayState(epochDay = epochDay, completedIds = ids)
         } catch (_: Exception) {
             null
+        }
+    }
+
+    /** Spec 014 — `{ "habitId": [epochDay, ...] }`. */
+    fun encodeHistory(history: HabitHistory): String {
+        val root = JSONObject()
+        history.forEach { (habitId, days) ->
+            val arr = JSONArray()
+            days.sorted().forEach { arr.put(it) }
+            root.put(habitId, arr)
+        }
+        return root.toString()
+    }
+
+    fun decodeHistory(raw: String?): HabitHistory {
+        if (raw.isNullOrBlank()) return emptyMap()
+        return try {
+            val root = JSONObject(raw)
+            buildMap {
+                val keys = root.keys()
+                while (keys.hasNext()) {
+                    val habitId = keys.next()
+                    if (habitId.isNullOrEmpty()) continue
+                    val arr = root.optJSONArray(habitId) ?: continue
+                    val days = buildSet {
+                        for (i in 0 until arr.length()) {
+                            if (!arr.isNull(i)) add(arr.getLong(i))
+                        }
+                    }
+                    if (days.isNotEmpty()) put(habitId, days)
+                }
+            }
+        } catch (_: Exception) {
+            emptyMap()
         }
     }
 }

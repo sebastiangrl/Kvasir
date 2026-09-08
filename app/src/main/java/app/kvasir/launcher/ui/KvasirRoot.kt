@@ -79,7 +79,7 @@ fun KvasirRoot(
                     rows = uiState.rows,
                     appsLoaded = uiState.appsLoaded,
                     onFavoriteChange = settingsViewModel::setFavorite,
-                    habits = uiState.habits,
+                    habitRows = uiState.habitRows,
                     onAddHabit = settingsViewModel::addHabit,
                     onRemoveHabit = settingsViewModel::removeHabit,
                     onRenameHabit = settingsViewModel::renameHabit,
