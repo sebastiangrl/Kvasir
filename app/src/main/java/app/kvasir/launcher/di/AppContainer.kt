@@ -2,6 +2,7 @@ package app.kvasir.launcher.di
 
 import android.content.Context
 import app.kvasir.launcher.data.apps.AppIconLoader
+import app.kvasir.launcher.data.apps.AppShortcutsRepository
 import app.kvasir.launcher.data.apps.LauncherAppsRepository
 import app.kvasir.launcher.data.calendar.CalendarEventsRepository
 import app.kvasir.launcher.data.home.DefaultHomeRepository
@@ -17,7 +18,8 @@ import kotlinx.coroutines.SupervisorJob
 
 /**
  * Spec 001 / RF-001-10 + Spec 002 / RF-002-11 + Spec 003 / RF-003-01 + Spec 010 / RF-010-05 +
- * Spec 012 / RF-012-05 + Spec 015 / RF-015-05 + Spec 016 / RF-016-04 + Spec 017 / RF-017-01 —
+ * Spec 012 / RF-012-05 + Spec 015 / RF-015-05 + Spec 016 / RF-016-04 + Spec 017 / RF-017-01 +
+ * Spec 018 / RF-018-01 —
  * Manual DI; Application context only (no Activity leaks).
  */
 class AppContainer(
@@ -37,6 +39,10 @@ class AppContainer(
             context = appContext,
             scope = applicationScope,
         )
+
+    /** Spec 018 — app shortcuts (query / start); no Compose. */
+    val appShortcutsRepository: AppShortcutsRepository =
+        AppShortcutsRepository(appContext)
 
     val preferencesRepository: PreferencesRepository =
         PreferencesRepository(appContext)

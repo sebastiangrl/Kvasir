@@ -42,6 +42,7 @@ class MainActivity : ComponentActivity() {
             calendarEventsRepository = app.container.calendarEventsRepository,
             pomodoroController = app.container.pomodoroController,
             notificationBadgeRepository = app.container.notificationBadgeRepository,
+            appShortcutsRepository = app.container.appShortcutsRepository,
         )
     }
 
