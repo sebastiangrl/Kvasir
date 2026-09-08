@@ -28,14 +28,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.kvasir.launcher.R
+import app.kvasir.launcher.domain.NextEventLineFormat
 import app.kvasir.launcher.domain.model.InstalledApp
+import app.kvasir.launcher.domain.model.NextCalendarEvent
 import app.kvasir.launcher.ui.gesture.onVerticalSwipe
 import app.kvasir.launcher.ui.icons.MonochromeAppIcon
 
 /**
- * Spec 003–005 + 008 + 009 + Spec 010 / RF-010-01 —
- * Home: clock, search, monochrome favorite icons, habits; swipes; long-press details.
- * No DataStore / PackageManager / LauncherApps / StatusBar calls here.
+ * Spec 003–005 + 008 + 009 + Spec 010 / RF-010-01 + Spec 012 / RF-012-03, RF-012-05, RF-012-07 —
+ * Home: clock, optional next-event line, search, favorites, habits.
+ * No DataStore / PackageManager / LauncherApps / CalendarContract / StatusBar calls here.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -54,6 +56,8 @@ fun HomeScreen(
     onSettingsClick: () -> Unit,
     onOpenOverlay: () -> Unit,
     onExpandSystemPanel: () -> Unit,
+    nextEvent: NextCalendarEvent? = null,
+    onNextEventClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -81,6 +85,20 @@ fun HomeScreen(
             }
 
             HomeClock()
+
+            val eventLine = nextEvent?.let { NextEventLineFormat.format(it) }.orEmpty()
+            if (eventLine.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = eventLine,
+                    modifier = Modifier
+                        .padding(horizontal = 24.dp)
+                        .clickable(onClick = onNextEventClick),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
             Spacer(modifier = Modifier.height(24.dp))
 
             OutlinedTextField(

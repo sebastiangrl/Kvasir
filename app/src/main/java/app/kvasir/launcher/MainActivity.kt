@@ -1,16 +1,20 @@
 package app.kvasir.launcher
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.kvasir.launcher.domain.model.ThemeMode
 import app.kvasir.launcher.ui.KvasirRoot
@@ -21,8 +25,9 @@ import app.kvasir.launcher.ui.settings.SettingsViewModel
 import app.kvasir.launcher.ui.theme.KvasirTheme
 
 /**
- * Spec 001–006 + Spec 010 — HOME Activity hosts [KvasirRoot]; theme via Compose only.
- * Composables do not call DataStore / LauncherApps.
+ * Spec 001–006 + Spec 010 + Spec 012 / RF-012-02 —
+ * HOME Activity hosts [KvasirRoot]; theme via Compose only.
+ * Composables do not call DataStore / LauncherApps / CalendarContract.
  */
 class MainActivity : ComponentActivity() {
 
@@ -32,6 +37,7 @@ class MainActivity : ComponentActivity() {
             defaultHomeRepository = app.container.defaultHomeRepository,
             launcherAppsRepository = app.container.launcherAppsRepository,
             preferencesRepository = app.container.preferencesRepository,
+            calendarEventsRepository = app.container.calendarEventsRepository,
         )
     }
 
@@ -49,6 +55,15 @@ class MainActivity : ComponentActivity() {
             appContext = app.container.appContext,
             launcherAppsRepository = app.container.launcherAppsRepository,
         )
+    }
+
+    /** Spec 012 — ask READ_CALENDAR at most once per process (no Home CTA). */
+    private var calendarPermissionRequestedThisProcess = false
+
+    private val requestCalendarPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) {
+        homeViewModel.refreshNextEvent()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -88,11 +103,24 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         homeViewModel.onResume()
+        maybeRequestCalendarPermissionOnce()
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         overlayViewModel.close()
+    }
+
+    /** Spec 012 / RF-012-02 — system dialog once per process if not already granted. */
+    private fun maybeRequestCalendarPermissionOnce() {
+        val granted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.READ_CALENDAR,
+        ) == PackageManager.PERMISSION_GRANTED
+        if (granted) return
+        if (calendarPermissionRequestedThisProcess) return
+        calendarPermissionRequestedThisProcess = true
+        requestCalendarPermission.launch(Manifest.permission.READ_CALENDAR)
     }
 }

@@ -18,8 +18,8 @@ import app.kvasir.launcher.ui.settings.SettingsViewModel
 import app.kvasir.launcher.domain.model.ThemeMode
 
 /**
- * Spec 003 + Spec 004 + Spec 008 + Spec 009 —
- * Home | Settings; lazy overlay; system panel + long-press app details.
+ * Spec 003 + Spec 004 + Spec 008 + Spec 009 + Spec 012 —
+ * Home | Settings; lazy overlay; system panel + long-press app details; next calendar event.
  */
 @Composable
 fun KvasirRoot(
@@ -44,6 +44,7 @@ fun KvasirRoot(
         when (destination) {
             RootDestination.Home -> {
                 val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
+                val nextEvent by homeViewModel.nextEvent.collectAsStateWithLifecycle()
                 HomeScreen(
                     showDefaultHomeCta = uiState.showDefaultHomeCta,
                     onChooseHomeClick = homeViewModel::openHomePicker,
@@ -62,6 +63,8 @@ fun KvasirRoot(
                     },
                     onOpenOverlay = overlayViewModel::open,
                     onExpandSystemPanel = homeViewModel::expandSystemPanel,
+                    nextEvent = nextEvent,
+                    onNextEventClick = homeViewModel::openNextEvent,
                 )
             }
             RootDestination.Settings -> {
