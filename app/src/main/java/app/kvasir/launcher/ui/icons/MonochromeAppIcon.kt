@@ -33,8 +33,9 @@ val LocalAppIconLoader = staticCompositionLocalOf<AppIconLoader> {
 }
 
 /**
- * Spec 010 / RF-010-03, RF-010-04, RF-010-06 + Spec 019 / RF-019-02 —
- * Monochrome-tinted app **glyph** (adaptive foreground); does not call LauncherApps / PackageManager.
+ * Spec 010 / RF-010-03, RF-010-04, RF-010-06 + Spec 019 / RF-019-02 +
+ * Spec 020 / RF-020-04 —
+ * Monochrome-tinted app **glyph** (supersampled luminance mask); no LauncherApps / PackageManager.
  */
 @Composable
 fun MonochromeAppIcon(

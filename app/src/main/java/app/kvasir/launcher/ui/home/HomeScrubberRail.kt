@@ -1,5 +1,6 @@
 package app.kvasir.launcher.ui.home
 
+import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -26,6 +27,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -36,8 +39,8 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /**
- * Spec 013 / RF-013-01 + Spec 019 / RF-019-04 —
- * Compact ★ + A–Z + # rail. Idle = dense / nearly flat; drag = leftward arc + bubble.
+ * Spec 013 / RF-013-01 + Spec 019 / RF-019-04 + Spec 020 / RF-020-05 —
+ * Compact ★ + A–Z + # rail. Drag: continuous sliding bubble + haptic on index change.
  */
 @Composable
 fun HomeScrubberRail(
@@ -49,17 +52,30 @@ fun HomeScrubberRail(
     val letterKeys = LetterBucket.KEYS
     // Index 0 = favorites star; 1.. = letters.
     val totalSlots = 1 + letterKeys.size
+    val view = LocalView.current
+    val density = LocalDensity.current
+    val bubbleSizePx = with(density) { BUBBLE_SIZE_DP.dp.toPx() }
+
     var scrubberHeightPx by remember { mutableFloatStateOf(0f) }
     var isDragging by remember { mutableStateOf(false) }
     var dragIndex by remember { mutableIntStateOf(-1) }
+    var dragYPx by remember { mutableFloatStateOf(0f) }
 
-    fun selectByIndex(index: Int) {
+    fun glyphAt(index: Int): String =
+        if (index <= 0) "★" else letterKeys[index - 1].toString()
+
+    fun selectByIndex(index: Int, yPx: Float) {
         val i = index.coerceIn(0, totalSlots - 1)
-        dragIndex = i
-        if (i == 0) {
-            onSelectFavorites()
-        } else {
-            onSelectLetter(letterKeys[i - 1])
+        dragYPx = yPx
+        if (i != dragIndex) {
+            // Spec 020 / RF-020-05 — brief haptic only when the slot changes (no VIBRATE perm).
+            view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+            dragIndex = i
+            if (i == 0) {
+                onSelectFavorites()
+            } else {
+                onSelectLetter(letterKeys[i - 1])
+            }
         }
     }
 
@@ -71,8 +87,23 @@ fun HomeScrubberRail(
         }
     }
 
+    fun indexFromY(yPx: Float): Int {
+        if (scrubberHeightPx <= 0f) return 0
+        val fraction = (yPx / scrubberHeightPx).coerceIn(0f, 1f)
+        return (fraction * (totalSlots - 1)).roundToInt()
+    }
+
     val activeIndex = if (isDragging && dragIndex >= 0) dragIndex else modeIndex()
     val curveAmplitudePx = if (isDragging) DRAG_CURVE_AMPLITUDE_PX else IDLE_CURVE_AMPLITUDE_PX
+    val dragFraction = if (scrubberHeightPx <= 0f) {
+        0.5f
+    } else {
+        (dragYPx / scrubberHeightPx).coerceIn(0f, 1f)
+    }
+    val bubbleCurvePx = (-sin(dragFraction * Math.PI) * curveAmplitudePx).roundToInt()
+    val bubbleOffsetY = (dragYPx - bubbleSizePx / 2f)
+        .coerceIn(0f, (scrubberHeightPx - bubbleSizePx).coerceAtLeast(0f))
+        .roundToInt()
 
     Box(
         modifier = modifier
@@ -80,53 +111,76 @@ fun HomeScrubberRail(
             .fillMaxHeight(),
         contentAlignment = Alignment.CenterEnd,
     ) {
-        Column(
+        Box(
             modifier = Modifier
                 .width(GLYPH_COLUMN_WIDTH_DP.dp)
                 .padding(vertical = 12.dp)
                 .onSizeChanged { scrubberHeightPx = it.height.toFloat() }
                 .pointerInput(totalSlots) {
                     detectVerticalDragGestures(
-                        onDragStart = {
+                        onDragStart = { offset ->
                             isDragging = true
-                            if (scrubberHeightPx > 0f) {
-                                val fraction = (it.y / scrubberHeightPx).coerceIn(0f, 1f)
-                                selectByIndex((fraction * (totalSlots - 1)).roundToInt())
-                            }
+                            selectByIndex(indexFromY(offset.y), offset.y)
                         },
-                        onDragEnd = { isDragging = false },
-                        onDragCancel = { isDragging = false },
+                        onDragEnd = {
+                            isDragging = false
+                            dragIndex = -1
+                        },
+                        onDragCancel = {
+                            isDragging = false
+                            dragIndex = -1
+                        },
                         onVerticalDrag = { change, _ ->
                             change.consume()
-                            if (scrubberHeightPx <= 0f) return@detectVerticalDragGestures
-                            val fraction = (change.position.y / scrubberHeightPx).coerceIn(0f, 1f)
-                            selectByIndex((fraction * (totalSlots - 1)).roundToInt())
+                            selectByIndex(indexFromY(change.position.y), change.position.y)
                         },
                     )
                 },
-            verticalArrangement = Arrangement.spacedBy(1.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            ScrubberGlyph(
-                text = "★",
-                selected = activeIndex == 0,
-                showBubble = isDragging && activeIndex == 0,
-                curveIndex = 0,
-                totalSlots = totalSlots,
-                curveAmplitudePx = curveAmplitudePx,
-                onClick = onSelectFavorites,
-            )
-            letterKeys.forEachIndexed { index, letter ->
-                val slot = index + 1
+            Column(
+                modifier = Modifier.align(Alignment.Center),
+                verticalArrangement = Arrangement.spacedBy(1.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
                 ScrubberGlyph(
-                    text = letter.toString(),
-                    selected = activeIndex == slot,
-                    showBubble = isDragging && activeIndex == slot,
-                    curveIndex = slot,
+                    text = "★",
+                    selected = !isDragging && activeIndex == 0,
+                    curveIndex = 0,
                     totalSlots = totalSlots,
                     curveAmplitudePx = curveAmplitudePx,
-                    onClick = { onSelectLetter(letter) },
+                    onClick = onSelectFavorites,
                 )
+                letterKeys.forEachIndexed { index, letter ->
+                    val slot = index + 1
+                    ScrubberGlyph(
+                        text = letter.toString(),
+                        selected = !isDragging && activeIndex == slot,
+                        curveIndex = slot,
+                        totalSlots = totalSlots,
+                        curveAmplitudePx = curveAmplitudePx,
+                        onClick = { onSelectLetter(letter) },
+                    )
+                }
+            }
+
+            // Spec 020 / RF-020-05 — continuous sliding bubble (not cell-snapped).
+            if (isDragging && scrubberHeightPx > 0f) {
+                Box(
+                    modifier = Modifier
+                        .offset { IntOffset(bubbleCurvePx, bubbleOffsetY) }
+                        .size(BUBBLE_SIZE_DP.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.22f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = glyphAt(activeIndex),
+                        fontSize = 13.sp,
+                        lineHeight = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
             }
         }
     }
@@ -136,14 +190,12 @@ fun HomeScrubberRail(
 private fun ScrubberGlyph(
     text: String,
     selected: Boolean,
-    showBubble: Boolean,
     curveIndex: Int,
     totalSlots: Int,
     curveAmplitudePx: Float,
     onClick: () -> Unit,
 ) {
     val fraction = if (totalSlots <= 1) 0.5f else curveIndex.toFloat() / (totalSlots - 1).toFloat()
-    // S-curve toward the list (negative X = left).
     val curvePx = (-sin(fraction * Math.PI) * curveAmplitudePx).roundToInt()
 
     Box(
@@ -153,23 +205,15 @@ private fun ScrubberGlyph(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        if (showBubble) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f)),
-            )
-        }
         Text(
             text = text,
             fontSize = 11.sp,
             lineHeight = 12.sp,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-            color = when {
-                showBubble -> MaterialTheme.colorScheme.onSurface
-                selected -> MaterialTheme.colorScheme.primary
-                else -> MaterialTheme.colorScheme.onSurfaceVariant
+            color = if (selected) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
             },
         )
     }

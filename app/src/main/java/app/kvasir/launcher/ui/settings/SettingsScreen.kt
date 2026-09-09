@@ -15,6 +15,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
@@ -29,19 +32,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import app.kvasir.launcher.R
 import app.kvasir.launcher.data.settings.PermissionsStatus
+import app.kvasir.launcher.domain.AppLabelFilter
 import app.kvasir.launcher.domain.model.PomodoroConfig
 import app.kvasir.launcher.domain.model.SettingsSection
 import app.kvasir.launcher.ui.theme.KvasirPillShape
 
 /**
  * Spec 003 + Spec 005 + Spec 006 + Spec 014 + Spec 015 + Spec 016 / RF-016-01…05 +
- * Spec 019 / RF-019-03 —
+ * Spec 019 / RF-019-03 + Spec 020 / RF-020-06…10 —
  * Settings hub + sections; no DataStore / LauncherApps / PackageManager here.
  */
 @Composable
@@ -58,9 +63,7 @@ fun SettingsScreen(
     darkTheme: Boolean,
     onDarkThemeChange: (Boolean) -> Unit,
     pomodoroConfig: PomodoroConfig,
-    onPomodoroWorkMinutes: (Int) -> Unit,
-    onPomodoroBreakMinutes: (Int) -> Unit,
-    onPomodoroSessions: (Int) -> Unit,
+    onSavePomodoroConfig: (PomodoroConfig) -> Unit,
     permissionsStatus: PermissionsStatus,
     onOpenHomePicker: () -> Unit,
     onRequestCalendarPermission: () -> Unit,
@@ -94,8 +97,12 @@ fun SettingsScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Start,
         ) {
-            TextButton(onClick = onBack) {
-                Text(text = stringResource(R.string.settings_back))
+            IconButton(onClick = onBack) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_arrow_back),
+                    contentDescription = stringResource(R.string.settings_back),
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
             }
             Text(
                 text = title,
@@ -112,9 +119,7 @@ fun SettingsScreen(
             )
             SettingsSection.Pomodoro -> PomodoroSection(
                 pomodoroConfig = pomodoroConfig,
-                onPomodoroWorkMinutes = onPomodoroWorkMinutes,
-                onPomodoroBreakMinutes = onPomodoroBreakMinutes,
-                onPomodoroSessions = onPomodoroSessions,
+                onSavePomodoroConfig = onSavePomodoroConfig,
             )
             SettingsSection.Favorites -> FavoritesSection(
                 rows = rows,
@@ -239,15 +244,11 @@ private fun AppearanceSection(
 @Composable
 private fun PomodoroSection(
     pomodoroConfig: PomodoroConfig,
-    onPomodoroWorkMinutes: (Int) -> Unit,
-    onPomodoroBreakMinutes: (Int) -> Unit,
-    onPomodoroSessions: (Int) -> Unit,
+    onSavePomodoroConfig: (PomodoroConfig) -> Unit,
 ) {
     PomodoroConfigFields(
         config = pomodoroConfig,
-        onWorkMinutes = onPomodoroWorkMinutes,
-        onBreakMinutes = onPomodoroBreakMinutes,
-        onSessions = onPomodoroSessions,
+        onSave = onSavePomodoroConfig,
     )
 }
 
@@ -257,7 +258,28 @@ private fun FavoritesSection(
     appsLoaded: Boolean,
     onFavoriteChange: (componentKey: String, favorite: Boolean) -> Unit,
 ) {
+    var query by remember { mutableStateOf("") }
+    val filteredRows = remember(rows, query) {
+        if (query.trim().isEmpty()) {
+            rows
+        } else {
+            rows.filter { AppLabelFilter.matches(it.app.label, query) }
+        }
+    }
+
     LazyColumn(modifier = Modifier.fillMaxSize()) {
+        item(key = "favorites_search") {
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 4.dp),
+                singleLine = true,
+                shape = KvasirPillShape,
+                placeholder = { Text(text = stringResource(R.string.search_apps_hint)) },
+            )
+        }
         when {
             !appsLoaded -> Unit
             rows.isEmpty() -> {
@@ -270,9 +292,19 @@ private fun FavoritesSection(
                     )
                 }
             }
+            filteredRows.isEmpty() -> {
+                item(key = "favorites_search_empty") {
+                    Text(
+                        text = stringResource(R.string.search_apps_empty),
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
             else -> {
                 items(
-                    items = rows,
+                    items = filteredRows,
                     key = { it.app.componentKey },
                 ) { row ->
                     Row(
@@ -343,7 +375,7 @@ private fun HabitsSection(
                         },
                     ),
                 )
-                TextButton(
+                IconButton(
                     onClick = {
                         val trimmed = newHabitLabel.trim()
                         if (trimmed.isNotEmpty()) {
@@ -353,7 +385,11 @@ private fun HabitsSection(
                         }
                     },
                 ) {
-                    Text(text = stringResource(R.string.habit_add_action))
+                    Icon(
+                        painter = painterResource(R.drawable.ic_add),
+                        contentDescription = stringResource(R.string.habit_add_action),
+                        tint = MaterialTheme.colorScheme.onSurface,
+                    )
                 }
             }
         }
@@ -386,7 +422,7 @@ private fun HabitsSection(
     }
 }
 
-/** Spec 016 / RF-016-04 + Spec 017 / RF-017-03 — permission rows + CTAs (state from ViewModel). */
+/** Spec 016 / RF-016-04 + Spec 017 / RF-017-03 + Spec 020 / RF-020-10 — permission rows + CTAs. */
 @Composable
 private fun PermissionsSection(
     status: PermissionsStatus,
@@ -460,6 +496,7 @@ private fun PermissionsSection(
             )
         }
         item(key = "perm_notification_listener") {
+            val listenerDenied = !status.notificationListenerGranted
             PermissionRow(
                 title = stringResource(R.string.settings_perm_notification_access),
                 statusText = if (status.notificationListenerGranted) {
@@ -467,12 +504,23 @@ private fun PermissionsSection(
                 } else {
                     stringResource(R.string.settings_perm_denied)
                 },
-                primaryActionLabel = if (!status.notificationListenerGranted) {
+                helpText = if (listenerDenied) {
+                    stringResource(R.string.settings_perm_notification_access_help)
+                } else {
+                    null
+                },
+                primaryActionLabel = if (listenerDenied) {
+                    stringResource(R.string.settings_perm_open_app_details)
+                } else {
+                    null
+                },
+                onPrimaryAction = onOpenAppDetailsSettings,
+                secondaryActionLabel = if (listenerDenied) {
                     stringResource(R.string.settings_perm_open_settings)
                 } else {
                     null
                 },
-                onPrimaryAction = onOpenNotificationListenerSettings,
+                onSecondaryAction = onOpenNotificationListenerSettings,
             )
         }
         if (status.exactAlarmApplicable) {
@@ -503,6 +551,7 @@ private fun PermissionsSection(
 private fun PermissionRow(
     title: String,
     statusText: String,
+    helpText: String? = null,
     primaryActionLabel: String? = null,
     onPrimaryAction: () -> Unit = {},
     secondaryActionLabel: String? = null,
@@ -523,6 +572,14 @@ private fun PermissionRow(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        if (helpText != null) {
+            Text(
+                text = helpText,
+                modifier = Modifier.padding(top = 6.dp),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         if (primaryActionLabel != null || secondaryActionLabel != null) {
             Row(
                 modifier = Modifier.padding(top = 4.dp),
@@ -546,9 +603,7 @@ private fun PermissionRow(
 @Composable
 private fun PomodoroConfigFields(
     config: PomodoroConfig,
-    onWorkMinutes: (Int) -> Unit,
-    onBreakMinutes: (Int) -> Unit,
-    onSessions: (Int) -> Unit,
+    onSave: (PomodoroConfig) -> Unit,
 ) {
     var workDraft by remember { mutableStateOf(config.workMinutes.toString()) }
     var breakDraft by remember { mutableStateOf(config.breakMinutes.toString()) }
@@ -560,9 +615,14 @@ private fun PomodoroConfigFields(
     }
     val focusManager = LocalFocusManager.current
 
-    fun commitInt(raw: String, fallback: Int, onCommit: (Int) -> Unit) {
-        val value = raw.toIntOrNull() ?: fallback
-        onCommit(value)
+    fun saveAll() {
+        onSave(
+            PomodoroConfig(
+                workMinutes = workDraft.toIntOrNull() ?: config.workMinutes,
+                breakMinutes = breakDraft.toIntOrNull() ?: config.breakMinutes,
+                sessionsPerCycle = sessionsDraft.toIntOrNull() ?: config.sessionsPerCycle,
+            ),
+        )
         focusManager.clearFocus()
     }
 
@@ -580,10 +640,7 @@ private fun PomodoroConfigFields(
             label = { Text(stringResource(R.string.pomodoro_work_min)) },
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Number,
-                imeAction = ImeAction.Done,
-            ),
-            keyboardActions = KeyboardActions(
-                onDone = { commitInt(workDraft, config.workMinutes, onWorkMinutes) },
+                imeAction = ImeAction.Next,
             ),
         )
         OutlinedTextField(
@@ -594,10 +651,7 @@ private fun PomodoroConfigFields(
             label = { Text(stringResource(R.string.pomodoro_break_min)) },
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Number,
-                imeAction = ImeAction.Done,
-            ),
-            keyboardActions = KeyboardActions(
-                onDone = { commitInt(breakDraft, config.breakMinutes, onBreakMinutes) },
+                imeAction = ImeAction.Next,
             ),
         )
         OutlinedTextField(
@@ -611,9 +665,15 @@ private fun PomodoroConfigFields(
                 imeAction = ImeAction.Done,
             ),
             keyboardActions = KeyboardActions(
-                onDone = { commitInt(sessionsDraft, config.sessionsPerCycle, onSessions) },
+                onDone = { focusManager.clearFocus() },
             ),
         )
+        Button(
+            onClick = { saveAll() },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(text = stringResource(R.string.pomodoro_save_changes))
+        }
     }
 }
 
@@ -658,8 +718,12 @@ private fun HabitEditRow(
                     },
                 ),
             )
-            TextButton(onClick = { onRemove(habit.id) }) {
-                Text(text = stringResource(R.string.habit_delete_action))
+            IconButton(onClick = { onRemove(habit.id) }) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_delete),
+                    contentDescription = stringResource(R.string.habit_delete_action),
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
             }
         }
         Row(

@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -32,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -56,8 +59,11 @@ import kotlinx.coroutines.delay
 /**
  * Spec 003–012 + Spec 013 / RF-013-01…04 + Spec 015 / RF-015-03, RF-015-07 +
  * Spec 017 / RF-017-04…06 + Spec 018 / RF-018-02…05 +
- * Spec 019 / RF-019-01, RF-019-03, RF-019-04, RF-019-05, RF-019-06 —
+ * Spec 019 / RF-019-01, RF-019-03, RF-019-04, RF-019-05, RF-019-06 +
+ * Spec 020 / RF-020-01…03 —
  * Unified Home: ★ chrome or letter/search catalog + scrubber rail + Pomodoro + badges.
+ * Search field is lifted above chrome/catalog so focus survives query → catalog switch
+ * (RF-008 typing continuity).
  * No DataStore / PackageManager / LauncherApps / CalendarContract / AlarmManager /
  * NotificationListener here.
  */
@@ -119,21 +125,47 @@ fun HomeScreen(
                     .padding(top = 32.dp),
                 verticalArrangement = Arrangement.Top,
             ) {
-                TextButton(
+                IconButton(
                     onClick = onSettingsClick,
                     modifier = Modifier
                         .align(Alignment.End)
-                        .padding(horizontal = 8.dp),
+                        .padding(horizontal = 4.dp),
                 ) {
-                    Text(text = stringResource(R.string.settings))
+                    Icon(
+                        painter = painterResource(R.drawable.ic_settings),
+                        contentDescription = stringResource(R.string.settings),
+                        tint = MaterialTheme.colorScheme.onSurface,
+                    )
                 }
+
+                // Clock only in ★ chrome; search stays mounted across chrome ↔ catalog.
+                if (showingFavoritesChrome) {
+                    val eventLine = nextEvent?.let { NextEventLineFormat.format(it) }.orEmpty()
+                    HomeClock(
+                        eventLine = eventLine,
+                        onEventClick = onNextEventClick,
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = onSearchQueryChange,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp),
+                    singleLine = true,
+                    shape = KvasirPillShape,
+                    placeholder = { Text(text = stringResource(R.string.search_apps_hint)) },
+                )
+                Spacer(
+                    modifier = Modifier.height(if (showingFavoritesChrome) 24.dp else 12.dp),
+                )
 
                 if (showingFavoritesChrome) {
                     FavoritesHomeBody(
                         showDefaultHomeCta = showDefaultHomeCta,
                         onChooseHomeClick = onChooseHomeClick,
-                        searchQuery = searchQuery,
-                        onSearchQueryChange = onSearchQueryChange,
                         favorites = favorites,
                         hasAnyFavorites = hasAnyFavorites,
                         favoritesReady = favoritesReady,
@@ -141,8 +173,6 @@ fun HomeScreen(
                         onFavoriteLongClick = onFavoriteLongClick,
                         habitRows = habitRows,
                         onHabitCheckedChange = onHabitCheckedChange,
-                        nextEvent = nextEvent,
-                        onNextEventClick = onNextEventClick,
                         pomodoroSession = pomodoroSession,
                         onPomodoroStart = onPomodoroStart,
                         onPomodoroPause = onPomodoroPause,
@@ -154,8 +184,6 @@ fun HomeScreen(
                     CatalogHomeBody(
                         listMode = listMode,
                         isQueryActive = isQueryActive,
-                        searchQuery = searchQuery,
-                        onSearchQueryChange = onSearchQueryChange,
                         catalogApps = catalogApps,
                         appsReady = favoritesReady,
                         onAppClick = onCatalogAppClick,
@@ -236,8 +264,6 @@ private fun ShortcutsSheetDialog(
 private fun FavoritesHomeBody(
     showDefaultHomeCta: Boolean,
     onChooseHomeClick: () -> Unit,
-    searchQuery: String,
-    onSearchQueryChange: (String) -> Unit,
     favorites: List<InstalledApp>,
     hasAnyFavorites: Boolean,
     favoritesReady: Boolean,
@@ -245,8 +271,6 @@ private fun FavoritesHomeBody(
     onFavoriteLongClick: (InstalledApp) -> Unit,
     habitRows: List<HomeHabitRow>,
     onHabitCheckedChange: (habitId: String, completed: Boolean) -> Unit,
-    nextEvent: NextCalendarEvent?,
-    onNextEventClick: () -> Unit,
     pomodoroSession: PomodoroSession,
     onPomodoroStart: () -> Unit,
     onPomodoroPause: () -> Unit,
@@ -255,27 +279,6 @@ private fun FavoritesHomeBody(
     badgedPackages: Set<String>,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
-        // Spec 019 / RF-019-06 — clock composition owns the next-event line (012).
-        val eventLine = nextEvent?.let { NextEventLineFormat.format(it) }.orEmpty()
-        HomeClock(
-            eventLine = eventLine,
-            onEventClick = onNextEventClick,
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = onSearchQueryChange,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp),
-            singleLine = true,
-            shape = KvasirPillShape,
-            placeholder = { Text(text = stringResource(R.string.search_apps_hint)) },
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-
         if (showDefaultHomeCta) {
             Text(
                 text = stringResource(R.string.home_not_default_message),
@@ -411,26 +414,12 @@ private fun FavoritesHomeBody(
 private fun CatalogHomeBody(
     listMode: HomeListMode,
     isQueryActive: Boolean,
-    searchQuery: String,
-    onSearchQueryChange: (String) -> Unit,
     catalogApps: List<InstalledApp>,
     appsReady: Boolean,
     onAppClick: (InstalledApp) -> Unit,
     onAppLongClick: (InstalledApp) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = onSearchQueryChange,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp),
-            singleLine = true,
-            shape = KvasirPillShape,
-            placeholder = { Text(text = stringResource(R.string.search_apps_hint)) },
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-
         if (!isQueryActive && listMode is HomeListMode.Letter) {
             Text(
                 text = listMode.letter.toString(),
