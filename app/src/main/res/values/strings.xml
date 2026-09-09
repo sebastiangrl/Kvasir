@@ -21,10 +21,18 @@
     <!-- Spec 015 — Pomodoro notifications (UI Home/Ajustes copy in T3). -->
     <string name="pomodoro_channel_name">Pomodoro</string>
     <string name="pomodoro_channel_description">Avisos al terminar trabajo, descanso o ciclo</string>
+    <string name="pomodoro_ongoing_channel_name">Pomodoro en curso</string>
+    <string name="pomodoro_ongoing_channel_description">Temporizador visible en pantalla de bloqueo</string>
     <string name="pomodoro_notify_work_done">Trabajo terminado</string>
     <string name="pomodoro_notify_break_done">Descanso terminado</string>
     <string name="pomodoro_notify_cycle_done">Ciclo Pomodoro completo</string>
     <string name="pomodoro_notify_body">Pulsa para volver a Kvasir</string>
+    <!-- Spec 021 / RF-021-07 — clearer phase-transition bodies. -->
+    <string name="pomodoro_notify_work_body">Empieza el descanso</string>
+    <string name="pomodoro_notify_break_body">Empieza el trabajo</string>
+    <string name="pomodoro_notify_cycle_body">Pulsa para volver a Kvasir</string>
+    <string name="pomodoro_ongoing_running_hint">En curso</string>
+    <string name="pomodoro_ongoing_paused_hint">Pausa · %1$s</string>
     <string name="pomodoro_stop">Detener</string>
     <string name="pomodoro_section">Pomodoro</string>
     <string name="pomodoro_start">Iniciar</string>
@@ -34,11 +42,23 @@
     <string name="pomodoro_status_work">Trabajo · %1$s</string>
     <string name="pomodoro_status_break">Descanso · %1$s</string>
     <string name="pomodoro_status_paused">Pausa · %1$s</string>
+    <!-- Spec 021 / RF-021-06 — phase label separate from large remaining. -->
+    <string name="pomodoro_phase_work">Trabajo</string>
+    <string name="pomodoro_phase_break">Descanso</string>
+    <string name="pomodoro_phase_paused">Pausa</string>
     <string name="pomodoro_work_min">Trabajo (min)</string>
     <string name="pomodoro_break_min">Descanso (min)</string>
     <string name="pomodoro_sessions">Sesiones por ciclo</string>
     <!-- Spec 020 / RF-020-07 — persist all Pomodoro fields together. -->
     <string name="pomodoro_save_changes">Guardar cambios</string>
+    <!-- Spec 021 / RF-021-01 — completed work sessions today. -->
+    <string name="pomodoro_today_count">Hoy · %d</string>
+    <!-- Spec 021 / RF-021-05 — sessions-per-cycle ≠ daily counter. -->
+    <string name="pomodoro_sessions_help">Cuántos bloques de trabajo hay en un ciclo (no es el contador del día).</string>
+    <!-- Spec 021 / RF-021-04 — history list in Settings. -->
+    <string name="pomodoro_history_title">Historial</string>
+    <string name="pomodoro_history_empty">Sin sesiones registradas todavía.</string>
+    <string name="pomodoro_history_row">%1$s · %2$d</string>
     <!-- Spec 017 — badge marker next to favorite label. -->
     <string name="home_app_badge_label">%1$s •</string>
     <!-- Spec 018 — shortcuts sheet. -->

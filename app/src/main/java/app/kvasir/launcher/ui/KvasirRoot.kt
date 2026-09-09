@@ -42,6 +42,7 @@ fun KvasirRoot(
                 val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
                 val nextEvent by homeViewModel.nextEvent.collectAsStateWithLifecycle()
                 val pomodoroSession by homeViewModel.pomodoroSession.collectAsStateWithLifecycle()
+                val pomodoroTodayCount by homeViewModel.pomodoroTodayCount.collectAsStateWithLifecycle()
                 val badgedPackages by homeViewModel.badgedPackages.collectAsStateWithLifecycle()
                 val shortcutsSheet by homeViewModel.shortcutsSheet.collectAsStateWithLifecycle()
                 val leaveFavoritesChrome =
@@ -82,6 +83,7 @@ fun KvasirRoot(
                     nextEvent = nextEvent,
                     onNextEventClick = homeViewModel::openNextEvent,
                     pomodoroSession = pomodoroSession,
+                    pomodoroTodayCount = pomodoroTodayCount,
                     onPomodoroStart = homeViewModel::startPomodoro,
                     onPomodoroPause = homeViewModel::pausePomodoro,
                     onPomodoroResume = homeViewModel::resumePomodoro,
@@ -111,6 +113,7 @@ fun KvasirRoot(
                     onDarkThemeChange = settingsViewModel::setDarkTheme,
                     pomodoroConfig = uiState.pomodoroConfig,
                     onSavePomodoroConfig = settingsViewModel::setPomodoroConfig,
+                    pomodoroHistory = uiState.pomodoroHistory,
                     permissionsStatus = permissionsStatus,
                     onOpenHomePicker = settingsViewModel::openHomePicker,
                     onRequestCalendarPermission = settingsViewModel::requestCalendarPermission,

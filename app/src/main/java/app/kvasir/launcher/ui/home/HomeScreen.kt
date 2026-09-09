@@ -60,7 +60,7 @@ import kotlinx.coroutines.delay
  * Spec 003–012 + Spec 013 / RF-013-01…04 + Spec 015 / RF-015-03, RF-015-07 +
  * Spec 017 / RF-017-04…06 + Spec 018 / RF-018-02…05 +
  * Spec 019 / RF-019-01, RF-019-03, RF-019-04, RF-019-05, RF-019-06 +
- * Spec 020 / RF-020-01…03 —
+ * Spec 020 / RF-020-01…03 + Spec 021 / RF-021-01 —
  * Unified Home: ★ chrome or letter/search catalog + scrubber rail + Pomodoro + badges.
  * Search field is lifted above chrome/catalog so focus survives query → catalog switch
  * (RF-008 typing continuity).
@@ -94,6 +94,7 @@ fun HomeScreen(
     nextEvent: NextCalendarEvent? = null,
     onNextEventClick: () -> Unit = {},
     pomodoroSession: PomodoroSession = PomodoroSession.Idle,
+    pomodoroTodayCount: Int = 0,
     onPomodoroStart: () -> Unit = {},
     onPomodoroPause: () -> Unit = {},
     onPomodoroResume: () -> Unit = {},
@@ -174,6 +175,7 @@ fun HomeScreen(
                         habitRows = habitRows,
                         onHabitCheckedChange = onHabitCheckedChange,
                         pomodoroSession = pomodoroSession,
+                        pomodoroTodayCount = pomodoroTodayCount,
                         onPomodoroStart = onPomodoroStart,
                         onPomodoroPause = onPomodoroPause,
                         onPomodoroResume = onPomodoroResume,
@@ -272,6 +274,7 @@ private fun FavoritesHomeBody(
     habitRows: List<HomeHabitRow>,
     onHabitCheckedChange: (habitId: String, completed: Boolean) -> Unit,
     pomodoroSession: PomodoroSession,
+    pomodoroTodayCount: Int,
     onPomodoroStart: () -> Unit,
     onPomodoroPause: () -> Unit,
     onPomodoroResume: () -> Unit,
@@ -342,6 +345,7 @@ private fun FavoritesHomeBody(
             item(key = "pomodoro") {
                 PomodoroHomeBlock(
                     session = pomodoroSession,
+                    todayCount = pomodoroTodayCount,
                     onStart = onPomodoroStart,
                     onPause = onPomodoroPause,
                     onResume = onPomodoroResume,
@@ -503,12 +507,13 @@ private fun AppRow(
 }
 
 /**
- * Spec 015 / RF-015-03, RF-015-07 —
- * Local 1 Hz tick only for this block; does not drive [HomeClock].
+ * Spec 015 / RF-015-03, RF-015-07 + Spec 021 / RF-021-01, RF-021-06, RF-021-09 —
+ * Surface container + large remaining; 1 Hz tick only here (not [HomeClock]).
  */
 @Composable
 private fun PomodoroHomeBlock(
     session: PomodoroSession,
+    todayCount: Int,
     onStart: () -> Unit,
     onPause: () -> Unit,
     onResume: () -> Unit,
@@ -527,51 +532,72 @@ private fun PomodoroHomeBlock(
     }
     val remaining = PomodoroPhaseMachine.remainingMillis(session, nowEpochMillis)
     val remainingLabel = PomodoroRemainingFormat.format(remaining)
-    val statusText = when (session.status) {
+    val phaseLabel = when (session.status) {
         PomodoroStatus.Idle -> stringResource(R.string.pomodoro_status_idle)
-        PomodoroStatus.Paused -> stringResource(R.string.pomodoro_status_paused, remainingLabel)
+        PomodoroStatus.Paused -> stringResource(R.string.pomodoro_phase_paused)
         PomodoroStatus.Running -> when (session.phase) {
-            PomodoroPhase.Work -> stringResource(R.string.pomodoro_status_work, remainingLabel)
-            PomodoroPhase.Break -> stringResource(R.string.pomodoro_status_break, remainingLabel)
+            PomodoroPhase.Work -> stringResource(R.string.pomodoro_phase_work)
+            PomodoroPhase.Break -> stringResource(R.string.pomodoro_phase_break)
         }
     }
 
-    Column(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 24.dp, vertical = 8.dp),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceVariant,
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = statusText,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 16.dp),
         ) {
-            when (session.status) {
-                PomodoroStatus.Idle -> {
-                    TextButton(onClick = onStart) {
-                        Text(text = stringResource(R.string.pomodoro_start))
+            Text(
+                text = phaseLabel,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (session.status != PomodoroStatus.Idle) {
+                Text(
+                    text = remainingLabel,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            Text(
+                text = stringResource(R.string.pomodoro_today_count, todayCount),
+                modifier = Modifier.padding(top = 4.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                when (session.status) {
+                    PomodoroStatus.Idle -> {
+                        TextButton(onClick = onStart) {
+                            Text(text = stringResource(R.string.pomodoro_start))
+                        }
                     }
-                }
-                PomodoroStatus.Running -> {
-                    TextButton(onClick = onPause) {
-                        Text(text = stringResource(R.string.pomodoro_pause))
+                    PomodoroStatus.Running -> {
+                        TextButton(onClick = onPause) {
+                            Text(text = stringResource(R.string.pomodoro_pause))
+                        }
+                        TextButton(onClick = onStop) {
+                            Text(text = stringResource(R.string.pomodoro_stop))
+                        }
                     }
-                    TextButton(onClick = onStop) {
-                        Text(text = stringResource(R.string.pomodoro_stop))
-                    }
-                }
-                PomodoroStatus.Paused -> {
-                    TextButton(onClick = onResume) {
-                        Text(text = stringResource(R.string.pomodoro_resume))
-                    }
-                    TextButton(onClick = onStop) {
-                        Text(text = stringResource(R.string.pomodoro_stop))
+                    PomodoroStatus.Paused -> {
+                        TextButton(onClick = onResume) {
+                            Text(text = stringResource(R.string.pomodoro_resume))
+                        }
+                        TextButton(onClick = onStop) {
+                            Text(text = stringResource(R.string.pomodoro_stop))
+                        }
                     }
                 }
             }

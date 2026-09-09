@@ -1,14 +1,17 @@
 package app.kvasir.launcher.data.pomodoro
 
 import app.kvasir.launcher.data.prefs.PreferencesRepository
+import app.kvasir.launcher.domain.PomodoroDailyLog
 import app.kvasir.launcher.domain.PomodoroPhaseMachine
 import app.kvasir.launcher.domain.model.PomodoroConfig
+import app.kvasir.launcher.domain.model.PomodoroNotifyEvent
 import app.kvasir.launcher.domain.model.PomodoroSession
 import app.kvasir.launcher.domain.model.PomodoroStatus
 
 /**
- * Spec 015 / RF-015-01, RF-015-02, RF-015-05, RF-015-08 —
- * Orchestrates prefs + alarm + notify. No Compose.
+ * Spec 015 / RF-015-01, RF-015-02, RF-015-05, RF-015-08 +
+ * Spec 021 / RF-021-03, RF-021-07, RF-021-08 —
+ * Orchestrates prefs + alarm + notify + daily work count + ongoing. No Compose.
  */
 class PomodoroController(
     private val preferencesRepository: PreferencesRepository,
@@ -37,34 +40,46 @@ class PomodoroController(
     suspend fun stop() {
         scheduler.cancel()
         preferencesRepository.setPomodoroSession(PomodoroPhaseMachine.stop().session)
-        notifier.cancelPhaseNotification()
+        notifier.cancelAllPomodoroNotifications()
     }
 
-    /** Alarm fired: advance phase, notify, reschedule if still running. */
+    /** Alarm fired: advance phase, notify, count completed work, reschedule if still running. */
     suspend fun onAlarmFired(nowEpochMillis: Long = System.currentTimeMillis()) {
         val config = preferencesRepository.getPomodoroConfig()
         val session = preferencesRepository.getPomodoroSession()
         val transition = PomodoroPhaseMachine.onAlarmFired(session, config, nowEpochMillis)
         persistAndSync(transition.session)
+        if (transition.notify == PomodoroNotifyEvent.WorkFinished) {
+            preferencesRepository.incrementPomodoroWorkCompleted(PomodoroDailyLog.dayKey())
+        }
         transition.notify?.let { notifier.notifyEvent(it) }
     }
 
     /**
      * After boot or process start: if session is Running with a future endsAt, reschedule;
-     * if endsAt already passed, treat as alarm fired.
+     * if endsAt already passed, treat as alarm fired; sync ongoing for paused/running.
      */
     suspend fun rescheduleIfNeeded(nowEpochMillis: Long = System.currentTimeMillis()) {
         val session = preferencesRepository.getPomodoroSession()
         when (session.status) {
-            PomodoroStatus.Idle, PomodoroStatus.Paused -> scheduler.cancel()
+            PomodoroStatus.Idle -> {
+                scheduler.cancel()
+                notifier.cancelOngoing()
+            }
+            PomodoroStatus.Paused -> {
+                scheduler.cancel()
+                notifier.syncOngoing(session)
+            }
             PomodoroStatus.Running -> {
                 val endsAt = session.endsAtEpochMillis
                 if (endsAt == null) {
                     scheduler.cancel()
+                    notifier.cancelOngoing()
                 } else if (endsAt <= nowEpochMillis) {
                     onAlarmFired(nowEpochMillis)
                 } else {
                     scheduler.schedule(endsAt)
+                    notifier.syncOngoing(session)
                 }
             }
         }
@@ -87,5 +102,6 @@ class PomodoroController(
             }
             PomodoroStatus.Idle, PomodoroStatus.Paused -> scheduler.cancel()
         }
+        notifier.syncOngoing(session)
     }
 }
