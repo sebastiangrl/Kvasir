@@ -37,6 +37,7 @@ Siguiente número libre en tres dígitos (`001`, `002`, …). No reutilizar núm
 | `017` | Badges de notificación |
 | `018` | Atajos de apps |
 | `019` | Pulido visual de Home |
+| `020` | Pulido Home/Ajustes + acceso a notificaciones |
 
 ## Backlog sugerido (aún no escrito)
 
@@ -48,7 +49,7 @@ _(vacío)_
 - Work profile → no necesario para uso personal hiperfocus.
 - Per-app theming → no encaja con hiperfocus / minimalismo; se deja el tema global (006).
 
-No escribir specs nuevas hasta que el usuario pida «especifica X» en PLAN. Siguiente número libre: **020**.
+No escribir specs nuevas hasta que el usuario pida «especifica X» en PLAN. Siguiente número libre: **021**.
 
 ## Contrato
 

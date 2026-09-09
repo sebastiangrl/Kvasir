@@ -37,6 +37,8 @@
     <string name="pomodoro_work_min">Trabajo (min)</string>
     <string name="pomodoro_break_min">Descanso (min)</string>
     <string name="pomodoro_sessions">Sesiones por ciclo</string>
+    <!-- Spec 020 / RF-020-07 — persist all Pomodoro fields together. -->
+    <string name="pomodoro_save_changes">Guardar cambios</string>
     <!-- Spec 017 — badge marker next to favorite label. -->
     <string name="home_app_badge_label">%1$s •</string>
     <!-- Spec 018 — shortcuts sheet. -->
@@ -62,4 +64,7 @@
     <string name="settings_perm_choose">Elegir</string>
     <string name="settings_perm_allow">Permitir</string>
     <string name="settings_perm_open_settings">Abrir ajustes</string>
+    <!-- Spec 020 / RF-020-10 — sideload Restricted settings guidance. -->
+    <string name="settings_perm_notification_access_help">En Android 13 o superior, si el APK no viene de Play Store: Ajustes del sistema → Apps → Kvasir → menú ⋮ → Permitir ajustes restringidos. Luego activa el acceso a notificaciones.</string>
+    <string name="settings_perm_open_app_details">Abrir ficha de la app</string>
 </resources>

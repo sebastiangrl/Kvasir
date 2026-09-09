@@ -69,3 +69,7 @@ Spec manda el cambio. Una spec, una rama, un PR. Merge a `main` solo con OK expl
 - Firma release: [`docs/signing.md`](docs/signing.md)
 - Índice docs: [`docs/README.md`](docs/README.md)
 - Agentes: [`AGENTS.md`](AGENTS.md)
+
+## Créditos
+
+- **Anurati** (día de la semana en Home): tipografía de [Emmeran Richard](https://www.emmeranrichard.fr/) — uso personal; detalle en [`docs/anurati.md`](docs/anurati.md).

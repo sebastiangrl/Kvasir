@@ -266,25 +266,10 @@ class SettingsViewModel(
         }
     }
 
-    /** Spec 015 / RF-015-04 — clamp and persist Pomodoro config fields. */
-    fun setPomodoroWorkMinutes(minutes: Int) {
+    /** Spec 015 / RF-015-04 + Spec 020 / RF-020-07 — clamp and persist full Pomodoro config. */
+    fun setPomodoroConfig(config: PomodoroConfig) {
         viewModelScope.launch {
-            val current = preferencesRepository.getPomodoroConfig()
-            preferencesRepository.setPomodoroConfig(current.copy(workMinutes = minutes))
-        }
-    }
-
-    fun setPomodoroBreakMinutes(minutes: Int) {
-        viewModelScope.launch {
-            val current = preferencesRepository.getPomodoroConfig()
-            preferencesRepository.setPomodoroConfig(current.copy(breakMinutes = minutes))
-        }
-    }
-
-    fun setPomodoroSessions(sessions: Int) {
-        viewModelScope.launch {
-            val current = preferencesRepository.getPomodoroConfig()
-            preferencesRepository.setPomodoroConfig(current.copy(sessionsPerCycle = sessions))
+            preferencesRepository.setPomodoroConfig(config)
         }
     }
 

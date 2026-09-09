@@ -10,20 +10,33 @@ import android.graphics.drawable.ScaleDrawable
 import app.kvasir.launcher.domain.IconSilhouetteOps
 
 /**
- * Spec 019 / RF-019-02 —
- * Rasterize a tintable glyph: adaptive **foreground** only (skip the circular plate).
+ * Spec 019 / RF-019-02 + Spec 020 / RF-020-04 —
+ * Adaptive **foreground** only; supersample + luminance mask → crisp tintable glyph.
+ * Temporary hi-res bitmap is not kept in the Drawable LRU.
  */
 object IconSilhouette {
 
     fun toBoundedBitmap(drawable: Drawable, sizePx: Int): Bitmap {
         val size = sizePx.coerceAtLeast(1)
+        val hi = (size * IconSilhouetteOps.SUPER_SAMPLE).coerceAtLeast(size)
         val glyph = drawable.glyphLayer()
-        val raster = glyph.rasterize(size)
-        val cropped = cropToVisibleAlpha(raster)
-        if (cropped === raster) return raster
+        val raster = glyph.rasterize(hi)
+        val width = raster.width
+        val height = raster.height
+        val pixels = IntArray(width * height)
+        raster.getPixels(pixels, 0, width, 0, 0, width, height)
+        IconSilhouetteOps.applyLuminanceMaskInPlace(pixels)
+
+        val cropped = cropMasked(pixels, width, height) ?: run {
+            raster.recycle()
+            return Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        }
         raster.recycle()
-        if (cropped.width == size && cropped.height == size) return cropped
-        val scaled = Bitmap.createScaledBitmap(cropped, size, size, true)
+
+        if (cropped.width == size && cropped.height == size) {
+            return cropped
+        }
+        val scaled = Bitmap.createScaledBitmap(cropped, size, size, /* filter */ true)
         if (scaled !== cropped) cropped.recycle()
         return scaled
     }
@@ -51,24 +64,19 @@ object IconSilhouette {
         return bitmap
     }
 
-    private fun cropToVisibleAlpha(bitmap: Bitmap): Bitmap {
-        val width = bitmap.width
-        val height = bitmap.height
-        val pixels = IntArray(width * height)
-        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
-        val raw = IconSilhouetteOps.visibleAlphaBounds(pixels, width, height) ?: return bitmap
+    private fun cropMasked(pixels: IntArray, width: Int, height: Int): Bitmap? {
+        val raw = IconSilhouetteOps.visibleAlphaBounds(pixels, width, height) ?: return null
         val bounds = IconSilhouetteOps.padBounds(raw, width, height)
-        if (bounds.left == 0 && bounds.top == 0 &&
-            bounds.right == width - 1 && bounds.bottom == height - 1
-        ) {
-            return bitmap
+        val outW = bounds.width
+        val outH = bounds.height
+        val out = IntArray(outW * outH)
+        for (y in 0 until outH) {
+            val srcRow = (bounds.top + y) * width + bounds.left
+            val dstRow = y * outW
+            System.arraycopy(pixels, srcRow, out, dstRow, outW)
         }
-        return Bitmap.createBitmap(
-            bitmap,
-            bounds.left,
-            bounds.top,
-            bounds.width,
-            bounds.height,
-        )
+        val bitmap = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888)
+        bitmap.setPixels(out, 0, outW, 0, 0, outW, outH)
+        return bitmap
     }
 }
