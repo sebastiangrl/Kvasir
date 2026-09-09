@@ -7,8 +7,8 @@ import app.kvasir.launcher.domain.model.PomodoroStatus
 import org.json.JSONObject
 
 /**
- * Spec 015 / RF-015-01, RF-015-02 —
- * org.json codec for Pomodoro config and session; corrupt → defaults / idle.
+ * Spec 015 / RF-015-01, RF-015-02 + Spec 021 / RF-021-02 —
+ * org.json codec for Pomodoro config, session, and daily counts; corrupt → defaults / idle / empty.
  */
 object PomodoroJson {
 
@@ -75,6 +75,30 @@ object PomodoroJson {
             )
         } catch (_: Exception) {
             PomodoroSession.Idle
+        }
+    }
+
+    /** Spec 021 / RF-021-02 — dayKey → completed work count; corrupt → empty. */
+    fun encodeDaily(map: Map<String, Int>): String {
+        val obj = JSONObject()
+        map.forEach { (day, count) ->
+            if (count > 0) obj.put(day, count)
+        }
+        return obj.toString()
+    }
+
+    fun decodeDaily(raw: String?): Map<String, Int> {
+        if (raw.isNullOrBlank()) return emptyMap()
+        return try {
+            val obj = JSONObject(raw)
+            buildMap {
+                obj.keys().forEach { key ->
+                    val count = obj.optInt(key, 0)
+                    if (count > 0) put(key, count)
+                }
+            }
+        } catch (_: Exception) {
+            emptyMap()
         }
     }
 }

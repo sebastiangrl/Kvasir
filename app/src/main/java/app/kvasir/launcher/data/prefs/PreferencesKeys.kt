@@ -5,7 +5,7 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 
 /**
  * Spec 003 + Spec 005 + Spec 006 / RF-006-01, RF-006-06 + Spec 014 / RF-014-01 +
- * Spec 015 / RF-015-01, RF-015-02 —
+ * Spec 015 / RF-015-01, RF-015-02 + Spec 021 / RF-021-02 —
  * Preferences schema; additive keys; missing → empty / light / Pomodoro defaults.
  */
 object PreferencesKeys {
@@ -29,4 +29,7 @@ object PreferencesKeys {
 
     /** Spec 015 / RF-015-02 — JSON active Pomodoro session. */
     val POMODORO_SESSION_JSON = stringPreferencesKey("pomodoro_session_json")
+
+    /** Spec 021 / RF-021-02 — JSON map `yyyy-MM-dd` → completed work sessions. */
+    val POMODORO_DAILY_JSON = stringPreferencesKey("pomodoro_daily_json")
 }

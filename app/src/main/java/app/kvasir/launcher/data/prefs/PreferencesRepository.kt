@@ -9,6 +9,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import app.kvasir.launcher.domain.HabitDayRoll
 import app.kvasir.launcher.domain.HabitHistoryOps
 import app.kvasir.launcher.domain.HabitJson
+import app.kvasir.launcher.domain.PomodoroDailyLog
 import app.kvasir.launcher.domain.PomodoroJson
 import app.kvasir.launcher.domain.model.Habit
 import app.kvasir.launcher.domain.model.HabitDayState
@@ -30,7 +31,7 @@ private val Context.kvasirDataStore: DataStore<Preferences> by preferencesDataSt
 
 /**
  * Spec 003 + Spec 005 + Spec 006 + Spec 014 / RF-014-01, RF-014-02, RF-014-07 +
- * Spec 015 / RF-015-01, RF-015-02 —
+ * Spec 015 / RF-015-01, RF-015-02 + Spec 021 / RF-021-02 —
  * Preferences DataStore; Application context only.
  */
 class PreferencesRepository(
@@ -75,6 +76,11 @@ class PreferencesRepository(
     /** Spec 015 — active session; missing/corrupt → idle. */
     val pomodoroSession: Flow<PomodoroSession> = dataStore.data.map { prefs ->
         PomodoroJson.decodeSession(prefs[PreferencesKeys.POMODORO_SESSION_JSON])
+    }
+
+    /** Spec 021 / RF-021-02 — completed work sessions by local day; missing/corrupt → empty. */
+    val pomodoroDaily: Flow<Map<String, Int>> = dataStore.data.map { prefs ->
+        PomodoroJson.decodeDaily(prefs[PreferencesKeys.POMODORO_DAILY_JSON])
     }
 
     suspend fun addFavorite(componentKey: String) {
@@ -204,6 +210,19 @@ class PreferencesRepository(
     suspend fun getPomodoroConfig(): PomodoroConfig = pomodoroConfig.first()
 
     suspend fun getPomodoroSession(): PomodoroSession = pomodoroSession.first()
+
+    /**
+     * Spec 021 / RF-021-02, RF-021-03 —
+     * Increment completed work count for [dayKey] (`yyyy-MM-dd`) and prune to 30 days.
+     */
+    suspend fun incrementPomodoroWorkCompleted(dayKey: String = PomodoroDailyLog.dayKey()) {
+        dataStore.edit { prefs ->
+            val current = PomodoroJson.decodeDaily(prefs[PreferencesKeys.POMODORO_DAILY_JSON])
+            val incremented = PomodoroDailyLog.incrementToday(current, dayKey)
+            val pruned = PomodoroDailyLog.prune(incremented, dayKey)
+            prefs[PreferencesKeys.POMODORO_DAILY_JSON] = PomodoroJson.encodeDaily(pruned)
+        }
+    }
 
     /**
      * If stored day ≠ today, append its completions to history (pruned), then return

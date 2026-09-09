@@ -11,6 +11,9 @@
     <!-- Spec 015 / RF-015-06 — phase/cycle notifications (runtime on API 33+). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Spec 021 / RF-021-07 — vibrate on Pomodoro phase-end alerts (normal permission). -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
     <!-- Spec 015 / RF-015-05 — exact end-of-phase alarms (timer role). -->
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 

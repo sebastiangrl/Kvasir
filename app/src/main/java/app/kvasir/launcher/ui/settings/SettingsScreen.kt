@@ -46,7 +46,7 @@ import app.kvasir.launcher.ui.theme.KvasirPillShape
 
 /**
  * Spec 003 + Spec 005 + Spec 006 + Spec 014 + Spec 015 + Spec 016 / RF-016-01…05 +
- * Spec 019 / RF-019-03 + Spec 020 / RF-020-06…10 —
+ * Spec 019 / RF-019-03 + Spec 020 / RF-020-06…10 + Spec 021 / RF-021-04, RF-021-05 —
  * Settings hub + sections; no DataStore / LauncherApps / PackageManager here.
  */
 @Composable
@@ -64,6 +64,7 @@ fun SettingsScreen(
     onDarkThemeChange: (Boolean) -> Unit,
     pomodoroConfig: PomodoroConfig,
     onSavePomodoroConfig: (PomodoroConfig) -> Unit,
+    pomodoroHistory: List<SettingsPomodoroDayRow> = emptyList(),
     permissionsStatus: PermissionsStatus,
     onOpenHomePicker: () -> Unit,
     onRequestCalendarPermission: () -> Unit,
@@ -120,6 +121,7 @@ fun SettingsScreen(
             SettingsSection.Pomodoro -> PomodoroSection(
                 pomodoroConfig = pomodoroConfig,
                 onSavePomodoroConfig = onSavePomodoroConfig,
+                history = pomodoroHistory,
             )
             SettingsSection.Favorites -> FavoritesSection(
                 rows = rows,
@@ -245,11 +247,51 @@ private fun AppearanceSection(
 private fun PomodoroSection(
     pomodoroConfig: PomodoroConfig,
     onSavePomodoroConfig: (PomodoroConfig) -> Unit,
+    history: List<SettingsPomodoroDayRow>,
 ) {
-    PomodoroConfigFields(
-        config = pomodoroConfig,
-        onSave = onSavePomodoroConfig,
-    )
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        item(key = "pomodoro_fields") {
+            PomodoroConfigFields(
+                config = pomodoroConfig,
+                onSave = onSavePomodoroConfig,
+            )
+        }
+        item(key = "pomodoro_history_title") {
+            Text(
+                text = stringResource(R.string.pomodoro_history_title),
+                modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 8.dp),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+        if (history.isEmpty()) {
+            item(key = "pomodoro_history_empty") {
+                Text(
+                    text = stringResource(R.string.pomodoro_history_empty),
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        } else {
+            items(
+                items = history,
+                key = { it.dayKey },
+            ) { row ->
+                Text(
+                    text = stringResource(R.string.pomodoro_history_row, row.label, row.count),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 8.dp),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        }
+        item(key = "pomodoro_spacer") {
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
 }
 
 @Composable
@@ -660,6 +702,9 @@ private fun PomodoroConfigFields(
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             label = { Text(stringResource(R.string.pomodoro_sessions)) },
+            supportingText = {
+                Text(text = stringResource(R.string.pomodoro_sessions_help))
+            },
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Number,
                 imeAction = ImeAction.Done,

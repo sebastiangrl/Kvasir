@@ -14,6 +14,7 @@ import app.kvasir.launcher.data.settings.AppSettingsNavigator
 import app.kvasir.launcher.data.settings.PermissionsStatus
 import app.kvasir.launcher.data.settings.PermissionsStatusHelper
 import app.kvasir.launcher.domain.HabitStreak
+import app.kvasir.launcher.domain.PomodoroDailyLog
 import app.kvasir.launcher.domain.model.Habit
 import app.kvasir.launcher.domain.model.InstalledApp
 import app.kvasir.launcher.domain.model.PomodoroConfig
@@ -30,9 +31,12 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 /**
- * Spec 003 + Spec 005 + Spec 006 + Spec 014 + Spec 015 + Spec 016 / RF-016-01…05 —
+ * Spec 003 + Spec 005 + Spec 006 + Spec 014 + Spec 015 + Spec 016 / RF-016-01…05 +
+ * Spec 021 / RF-021-04 —
  * Settings hub + permissions CTAs; Composables never touch DataStore / PM / Settings.
  */
 data class SettingsFavoriteRow(
@@ -47,12 +51,21 @@ data class SettingsHabitRow(
     val lastSevenDays: List<Boolean>,
 )
 
+/** Spec 021 / RF-021-04 — one day in Pomodoro history. */
+data class SettingsPomodoroDayRow(
+    val dayKey: String,
+    val count: Int,
+    /** Localized date label for UI (Spanish). */
+    val label: String,
+)
+
 data class SettingsUiState(
     val rows: List<SettingsFavoriteRow> = emptyList(),
     val appsLoaded: Boolean = false,
     val habitRows: List<SettingsHabitRow> = emptyList(),
     val themeMode: ThemeMode = ThemeMode.Light,
     val pomodoroConfig: PomodoroConfig = PomodoroConfig.Default,
+    val pomodoroHistory: List<SettingsPomodoroDayRow> = emptyList(),
 )
 
 /** Spec 016 — hub asks Activity to run a runtime permission dialog. */
@@ -139,13 +152,15 @@ class SettingsViewModel(
         },
         preferencesRepository.themeMode,
         preferencesRepository.pomodoroConfig,
-    ) { catalog, theme, pomodoro ->
+        preferencesRepository.pomodoroDaily,
+    ) { catalog, theme, pomodoro, daily ->
         SettingsUiState(
             rows = catalog.rows,
             appsLoaded = catalog.appsLoaded,
             habitRows = catalog.habitRows,
             themeMode = theme,
             pomodoroConfig = pomodoro,
+            pomodoroHistory = formatPomodoroHistory(daily),
         )
     }.stateIn(
         scope = viewModelScope,
@@ -274,6 +289,20 @@ class SettingsViewModel(
     }
 
     companion object {
+        private val pomodoroDayLabelFormatter: DateTimeFormatter =
+            DateTimeFormatter.ofPattern("d MMM", Locale.forLanguageTag("es"))
+
+        /** Spec 021 / RF-021-04 — newest first with Spanish date labels. */
+        fun formatPomodoroHistory(daily: Map<String, Int>): List<SettingsPomodoroDayRow> =
+            PomodoroDailyLog.sortedEntries(daily).map { (dayKey, count) ->
+                val label = try {
+                    LocalDate.parse(dayKey).format(pomodoroDayLabelFormatter)
+                } catch (_: Exception) {
+                    dayKey
+                }
+                SettingsPomodoroDayRow(dayKey = dayKey, count = count, label = label)
+            }
+
         fun factory(
             launcherAppsRepository: LauncherAppsRepository,
             preferencesRepository: PreferencesRepository,

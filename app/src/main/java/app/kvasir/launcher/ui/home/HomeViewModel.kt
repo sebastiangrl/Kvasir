@@ -20,6 +20,7 @@ import app.kvasir.launcher.data.system.SystemPanels
 import app.kvasir.launcher.domain.AppLabelFilter
 import app.kvasir.launcher.domain.FavoritesResolver
 import app.kvasir.launcher.domain.HabitStreak
+import app.kvasir.launcher.domain.PomodoroDailyLog
 import app.kvasir.launcher.domain.model.AppShortcut
 import app.kvasir.launcher.domain.model.Habit
 import app.kvasir.launcher.domain.model.HomeListMode
@@ -34,6 +35,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -42,7 +44,8 @@ import java.time.LocalDate
 /**
  * Spec 003 favorites + Spec 005 habits + Spec 008 + Spec 012 + Spec 013 +
  * Spec 014 / RF-014-04 + Spec 015 / RF-015-03, RF-015-06, RF-015-07 +
- * Spec 017 / RF-017-04, RF-017-05, RF-017-06 + Spec 018 / RF-018-02…05 —
+ * Spec 017 / RF-017-04, RF-017-05, RF-017-06 + Spec 018 / RF-018-02…05 +
+ * Spec 021 / RF-021-01 —
  * Home UI state; Composables never call DataStore / LauncherApps / CalendarContract /
  * AlarmManager / NotificationListener / ShortcutManager.
  */
@@ -107,6 +110,16 @@ class HomeViewModel(
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = PomodoroSession.Idle,
         )
+
+    /** Spec 021 / RF-021-01 — completed work sessions today; isolated from clock 1 Hz. */
+    val pomodoroTodayCount: StateFlow<Int> =
+        preferencesRepository.pomodoroDaily
+            .map { daily -> PomodoroDailyLog.todayCount(daily, PomodoroDailyLog.dayKey()) }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = 0,
+            )
 
     /**
      * Spec 017 / RF-017-04, RF-017-06 — packages with badge; isolated from clock 1 Hz.

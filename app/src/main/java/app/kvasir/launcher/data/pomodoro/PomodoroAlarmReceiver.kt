@@ -7,8 +7,8 @@ import app.kvasir.launcher.KvasirApp
 import kotlinx.coroutines.launch
 
 /**
- * Spec 015 / RF-015-05, RF-015-08 —
- * Handles phase alarm, stop action, and boot reschedule. No UI.
+ * Spec 015 / RF-015-05, RF-015-08 + Spec 021 / RF-021-08 —
+ * Handles phase alarm, pause/resume/stop actions, and boot reschedule. No UI.
  */
 class PomodoroAlarmReceiver : BroadcastReceiver() {
 
@@ -21,6 +21,8 @@ class PomodoroAlarmReceiver : BroadcastReceiver() {
                 when (intent?.action) {
                     ACTION_ALARM -> controller.onAlarmFired()
                     ACTION_STOP -> controller.stop()
+                    ACTION_PAUSE -> controller.pause()
+                    ACTION_RESUME -> controller.resume()
                     Intent.ACTION_BOOT_COMPLETED -> controller.rescheduleIfNeeded()
                 }
             } finally {
@@ -32,5 +34,7 @@ class PomodoroAlarmReceiver : BroadcastReceiver() {
     companion object {
         const val ACTION_ALARM = "app.kvasir.launcher.action.POMODORO_ALARM"
         const val ACTION_STOP = "app.kvasir.launcher.action.POMODORO_STOP"
+        const val ACTION_PAUSE = "app.kvasir.launcher.action.POMODORO_PAUSE"
+        const val ACTION_RESUME = "app.kvasir.launcher.action.POMODORO_RESUME"
     }
 }
